@@ -1,0 +1,23 @@
+{
+  "name": "nlk",
+  "productName": "BusSmith",
+  "version": "1.0.0",
+  "description": "BusSmith - KNX engineering software",
+  "main": "main.js",
+  "author": "BusSmith",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win nsis portable"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "build": {
+    "appId": "com.nlk.knx",
+    "productName": "BusSmith",
+    "files": ["main.js", "BusSmith.html"],
+    "win": { "target": ["nsis", "portable"] },
+    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true, "createDesktopShortcut": true }
+  }
+}

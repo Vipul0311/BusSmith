@@ -1,0 +1,2308 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BusSmith</title>
+<style>
+:root{--bar:#5da12b;--barfg:#fff;--bg:#e9ecef;--panel:#fff;--panel2:#f5f7f9;--b:#d3d8df;--tx:#1d2330;--mut:#6b7280;--acc:#3f8a1f;--accfg:#fff;--sel:#dcefd0;--hov:#eef5e8;--danger:#c0392b;--ok:#2a9d4a;color-scheme:light}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0}
+body{font:13px/1.4 "Segoe UI",system-ui,sans-serif;color:var(--tx);background:var(--bg);overflow:hidden}
+button,input,select,textarea{font:inherit;color:inherit}
+.btn{padding:3px 10px;border:1px solid var(--b);border-radius:3px;background:var(--panel);cursor:pointer;white-space:nowrap}
+.btn:hover:not(:disabled){border-color:var(--acc);background:var(--hov)}
+.btn.pri{background:var(--acc);color:var(--accfg);border-color:var(--acc)}
+.btn.danger{color:var(--danger)}
+.btn:disabled{opacity:.45;cursor:default}
+.tb{border:0;background:none;padding:4px 9px;cursor:pointer;border-radius:3px;white-space:nowrap}
+.tb:hover:not(:disabled){background:var(--hov)}
+.tb:disabled{opacity:.4;cursor:default}
+input,select,textarea{padding:3px 6px;border:1px solid var(--b);border-radius:3px;background:var(--panel)}
+input:focus,select:focus,textarea:focus{outline:1px solid var(--acc);border-color:var(--acc)}
+.mut{color:var(--mut)}.mono{font-family:ui-monospace,Consolas,monospace}.pad{padding:10px}.sp{flex:1}
+/* login */
+#login{position:fixed;inset:0;background:linear-gradient(135deg,#4a8a22,#7bbd4a);display:flex;align-items:center;justify-content:center;z-index:100}
+.lcard{background:#fff;border-radius:8px;padding:26px 30px;width:360px;box-shadow:0 12px 40px #0004}
+.lcard h1{margin:0 0 2px;letter-spacing:.12em;color:var(--acc);font-size:26px}
+.lcard label{display:block;margin-top:12px;color:var(--mut)}
+.lcard input{display:block;width:100%;margin-top:3px;padding:7px 9px;color:var(--tx)}
+.lcard .btn{width:100%;margin-top:18px;padding:8px}
+#lerr{color:var(--danger);min-height:1.3em;margin-top:8px}
+/* app layout */
+#app{display:grid;grid-template-rows:auto auto minmax(0,1fr) auto;height:100vh}
+.titlebar{display:flex;align-items:stretch;background:var(--bar);color:var(--barfg);min-height:40px}
+.brand{display:flex;align-items:center;padding:0 14px;font-weight:700;letter-spacing:.14em;font-size:16px;border-right:1px solid #ffffff40}
+.ptitle{display:flex;flex-direction:column;justify-content:center;padding:0 14px;min-width:150px}
+.ptitle b{font-size:13px;line-height:1.1}.ptitle small{opacity:.85;font-size:11px}
+.tabs{display:flex;align-items:flex-end;gap:2px;overflow:hidden;flex:0 1 auto}
+.tab{display:flex;align-items:center;gap:8px;background:#ffffff30;padding:6px 12px;border-radius:5px 5px 0 0;cursor:pointer;max-width:220px;white-space:nowrap}
+.tab small{opacity:.85}
+.tab.on{background:#fff;color:var(--tx)}
+.tab b{cursor:pointer;opacity:.7;font-weight:400}.tab b:hover{opacity:1}
+.titlebar .tb{color:#fff;font-size:16px;align-self:center}
+.titlebar .tb:hover{background:#ffffff30}
+.toolbar{display:flex;gap:2px;align-items:center;padding:3px 8px;background:var(--panel);border-bottom:1px solid var(--b);min-height:34px}
+.crumbs{color:var(--mut);padding:0 10px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:42vw}
+.crumbs b{color:var(--tx);font-weight:600}
+.toolbar input#gwip{width:150px;margin-left:8px}
+.pill{padding:1px 9px;border-radius:99px;border:1px solid var(--b);color:var(--mut);margin-left:4px}
+.pill.ok{border-color:var(--ok);color:var(--ok)}.pill.err{border-color:var(--danger);color:var(--danger)}
+.dw{position:relative;display:inline-block}
+.ddm{display:none;position:absolute;top:100%;left:0;min-width:230px;background:var(--panel);border:1px solid var(--b);box-shadow:0 8px 22px #0003;z-index:60;padding:3px 0}
+.ddm.r{left:auto;right:0}.ddm.open{display:block}
+.mi{display:flex;justify-content:space-between;align-items:center;padding:6px 14px;cursor:pointer;position:relative;white-space:nowrap;gap:16px}
+.mi:hover{background:var(--sel)}
+.mi.dis{opacity:.45;pointer-events:none}
+.mi .star{color:#c98a2b;cursor:pointer;padding:0 4px}
+.mi.has>.sm{display:none;position:absolute;left:100%;top:-4px;min-width:230px;background:var(--panel);border:1px solid var(--b);box-shadow:0 8px 22px #0003;padding:3px 0}
+.mi.has:hover>.sm{display:block}
+.ctxm-x{}
+#ctxm{position:fixed;z-index:300;min-width:300px;background:var(--panel);border:1px solid var(--b);box-shadow:0 8px 22px #0004;padding:3px 0;font-size:13.5px}#ctxm hr{border:0;border-top:1px solid var(--b);margin:3px 0}#ctxm .mi .mut{font-size:11.5px}.dca{border:1px solid var(--b);background:var(--panel)}.dtop{display:flex;gap:6px;align-items:center;padding:6px;border-bottom:1px solid var(--b)}.dtop b{margin-right:12px;font-size:16px}.dbody{display:flex}.dnav{width:190px;flex:none;border-right:1px solid var(--b)}.dnav h4{margin:0;padding:8px 10px;background:#eef2f6}.dnv{padding:7px 10px 7px 30px;cursor:pointer}.dnv.on{background:#3a8fe0;color:#fff}.dnv:hover:not(.on){background:var(--hov)}.dmain{flex:1;min-width:0;padding:8px}.dtb{display:flex;gap:6px;margin-bottom:8px;background:#dbe8f6;padding:6px}.dsplit{display:flex;gap:10px;align-items:flex-start}.dwrap{flex:1;max-height:58vh;overflow:auto;border:1px solid var(--b)}.dr.on{background:var(--sel)}.dr input,.dr select{width:100%}.dbus{width:240px;flex:none;border:1px solid var(--b);padding:8px}.dbl{list-style:none;margin:8px 0;padding:0;min-height:60px}.dbl li{padding:5px 6px;border:1px solid var(--b);margin-bottom:4px;cursor:grab;display:flex;justify-content:space-between}.dbl li.on{background:var(--sel)}
+.ptb{display:flex;gap:6px;justify-content:flex-end;margin-bottom:6px}.pbc{font-size:16px;margin:6px 0 10px}.psplit{display:flex;border:1px solid var(--b);background:var(--panel);min-height:300px}.ptree{width:300px;flex:none;border-right:1px solid var(--b);max-height:70vh;overflow:auto}.pch{padding:10px 12px;background:#eef2f6;cursor:pointer;border-bottom:1px solid var(--b);font-weight:500}.pm{display:inline-block;width:22px;color:#667}.ppg{padding:9px 12px 9px 40px;cursor:pointer}.ppg:hover{background:var(--hov)}.ppg.on{background:#fff;color:#2b7a1e;font-weight:600;box-shadow:inset 3px 0 #2b7a1e}.pbody{flex:1;min-width:0;max-height:70vh;overflow:auto;padding:10px 16px}.phd{color:#667;font-size:12.5px;margin-bottom:8px}.prow{display:flex;align-items:center;gap:16px;padding:5px 8px;border-bottom:1px solid #0000}.prow:hover{background:var(--hov)}.prow.chg{background:#fff3c4}.plb{flex:1}.pct{width:300px;flex:none;display:flex;justify-content:flex-end}.pct input[type=checkbox]{width:18px;height:18px}.pct select,.pct input:not([type=checkbox]){width:100%}
+.ddm hr{border:0;border-top:1px solid var(--b);margin:3px 0}
+.ddm .hd{padding:6px 14px;color:var(--mut);border-bottom:1px solid var(--b)}
+.ws{display:grid;grid-template-columns:280px minmax(0,1fr) 310px;min-height:0}
+.ws.noleft{grid-template-columns:0 minmax(0,1fr) 310px}.ws.noright{grid-template-columns:280px minmax(0,1fr) 0}.ws.noleft.noright{grid-template-columns:0 minmax(0,1fr) 0}
+.ws.noleft #left,.ws.noright #right{display:none}
+#left{display:flex;flex-direction:column;border-right:1px solid var(--b);background:var(--panel);min-height:0}
+#lhead{display:flex;border-bottom:1px solid var(--b);background:var(--panel2)}
+#lhead .lhb{flex:1;text-align:left;border:0;background:none;padding:8px 10px;font-weight:600;cursor:pointer}
+#lhead .lhb:hover{background:var(--hov)}
+#rail{border-bottom:1px solid var(--b)}
+.rl{display:flex;align-items:center;padding:4px 10px;cursor:pointer;gap:6px}
+.rl:hover{background:var(--hov)}.rl.on{background:var(--sel);font-weight:600}
+.rl .star{margin-left:auto;color:#c98a2b}
+.ltools{display:flex;gap:6px;padding:6px;border-bottom:1px solid var(--b)}
+.ltools input{flex:1;min-width:0}
+#tree{flex:1;overflow:auto;padding:3px 0}
+.tn{display:flex;align-items:center;padding:2px 6px;cursor:default;white-space:nowrap}
+.tn:hover{background:var(--hov)}.tn.on{background:var(--sel)}
+.chev{width:14px;color:var(--mut);cursor:pointer;flex:none;text-align:center}
+.lbl{overflow:hidden;text-overflow:ellipsis}
+.ic{width:10px;height:10px;border-radius:2px;display:inline-block;margin:0 6px 0 2px;flex:none}
+.ic.m{background:#3f8a1f}.ic.d{background:#4f8cc9}.ic.g{background:#c98a2b}.ic.a{background:#7b61c9}.ic.l{background:#5b8c3a}.ic.v{background:#c45a8a}.ic.b{background:#8a6d3b}.ic.f{background:#e0a030}.ic.r{background:#4a90a4}.ic.t{background:#6b7280}
+#center{overflow:auto;padding:12px 16px;background:var(--panel2);min-width:0}
+.ch{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px}
+.ch h2{margin:0;font-size:17px;font-weight:600}
+.kind{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--mut)}
+.acts{display:flex;gap:6px;flex-wrap:wrap}
+.tbl{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--b)}
+.tbl th{background:var(--panel2);text-align:left;font-weight:600;padding:4px 8px;border-bottom:1px solid var(--b);white-space:nowrap}
+.tbl td{padding:3px 8px;border-bottom:1px solid #e7eaee}
+.tbl tr.click:hover{background:var(--hov);cursor:pointer}
+.tbl input[type=text],.tbl input:not([type]),.tbl select{width:100%;min-width:70px;padding:1px 4px}
+.scroll{overflow:auto}
+.objt td{white-space:nowrap}
+.card{background:var(--panel);border:1px solid var(--b);border-radius:4px;padding:10px 12px;margin-bottom:12px}
+.card h4{margin:0 0 8px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.kv{display:grid;grid-template-columns:160px 1fr;gap:4px 12px}
+.kv div:nth-child(odd){color:var(--mut)}
+.welcome{max-width:520px;margin:50px auto;text-align:center}
+.empty{color:var(--mut);padding:14px;background:var(--panel);border:1px dashed var(--b);border-radius:4px}
+.subtabs{display:flex;gap:2px;border-bottom:1px solid var(--b);margin-bottom:10px}
+.subtabs button{border:0;background:none;padding:6px 14px;cursor:pointer;border-bottom:2px solid transparent}
+.subtabs button.on{border-bottom-color:var(--acc);color:var(--acc);font-weight:600}
+/* right pane */
+#right{display:flex;flex-direction:column;border-left:1px solid var(--b);background:var(--panel);min-height:0}
+#rhead{padding:8px 12px;font-weight:600;border-bottom:1px solid var(--b);background:var(--panel2)}
+.ptabs{display:flex;border-bottom:1px solid var(--b)}
+.ptabs button{flex:1;border:0;background:none;padding:6px 2px;cursor:pointer;color:var(--mut);border-bottom:2px solid transparent}
+.ptabs button.on{color:var(--acc);border-bottom-color:var(--acc)}
+#rbody{flex:1;overflow:auto;padding:10px 12px}
+#rbody label{display:block;margin:8px 0 0;color:var(--mut);font-size:12px}
+#rbody label input,#rbody label select,#rbody label textarea{display:block;width:100%;margin-top:2px;color:var(--tx);font-size:13px}
+#rbody .ro{color:var(--tx);margin-top:2px}
+#rlist{border-top:1px solid var(--b)}
+.rli{display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;color:var(--mut);border-top:1px solid #eef0f3}
+.rli:hover{background:var(--hov)}.rli.on{background:var(--sel);color:var(--tx);font-weight:600}
+.rli .cnt{margin-left:auto;background:var(--panel2);border-radius:99px;padding:0 7px;font-size:11px}
+.li{padding:5px 0;border-bottom:1px solid #eef0f3}
+.li.click{cursor:pointer}.li.click:hover{background:var(--hov)}
+.li.cur{background:var(--sel)}
+.cm{background:var(--panel2);border-radius:4px;padding:6px 8px;margin-bottom:6px}
+.cm small{color:var(--mut)}
+/* monitor */
+.mbar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+.logwrap{height:calc(100vh - 290px);min-height:200px;overflow:auto;border:1px solid var(--b);background:var(--panel)}
+.logwrap table{border-collapse:collapse;width:100%;font:12px ui-monospace,Consolas,monospace}
+.logwrap th{position:sticky;top:0;background:var(--panel2);text-align:left;padding:3px 8px;border-bottom:1px solid var(--b)}
+.logwrap td{padding:1px 8px;border-bottom:1px solid #eef0f3;white-space:nowrap}
+.logwrap tr.tx td{color:var(--acc)}
+.logwrap td button{padding:0 6px}
+.sb{display:flex;gap:18px;padding:3px 10px;background:var(--bar);color:#fff;font-size:12px}
+dialog{border:1px solid var(--b);border-radius:8px;background:var(--panel);color:var(--tx);min-width:340px}
+dialog label{display:block;margin:8px 0;color:var(--mut)}
+dialog label input,dialog label select{display:block;width:100%;margin-top:2px;color:var(--tx)}
+dialog menu{display:flex;justify-content:flex-end;gap:8px;padding:0;margin:12px 0 0}
+#clist{border:1px solid var(--b);min-height:120px;max-height:260px;overflow:auto;background:var(--bg,#fff)}#cdlg{min-width:560px}.chead{padding:4px 8px;font-weight:600}.crow{display:flex;gap:10px;align-items:center;padding:5px 24px;cursor:pointer}.crow.on{background:#cfe3f7}.crow:hover{background:#e6f0fa}.cnone{padding:4px 24px}.cic{width:18px}#sdlg{width:min(1000px,96vw);height:min(640px,92vh);padding:0}.sform{display:flex;flex-direction:column;height:100%}.shead{display:flex;justify-content:space-between;align-items:center;padding:8px 16px;border-bottom:1px solid var(--b)}.shead h3{margin:0}.sbody{display:flex;flex:1;min-height:0}#snav{width:200px;flex:none;border-right:1px solid var(--b);overflow:auto}.snav{padding:10px 16px;cursor:pointer}.snav:hover{background:#e6f0fa}.snav.on{background:#cfe3f7;font-weight:600}#spage{flex:1;overflow:auto;padding:16px}.appsgrid{display:flex;gap:20px;align-items:flex-start}.appsgrid>.appl{flex:1;min-width:0}.appsgrid>.appr{width:200px;flex:none;display:flex;flex-direction:column;gap:8px}tr.arow{cursor:pointer}tr.arow.on{background:#cfe3f7}.okd{color:#2e8b2e}.wrn{color:#c98a2b}#adlg{width:min(1000px,96vw)}#adbody{max-height:66vh;overflow:auto;min-width:600px}.sec td{background:#eef2f6;font-weight:600}tr.cdiff td{background:#fff3cd}.chsplit{display:flex;gap:12px;align-items:flex-start}.chlist{width:250px;flex:none;border:1px solid var(--b);max-height:70vh;overflow:auto}.chitem{padding:6px 10px;cursor:pointer;display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid var(--b)}.chitem.on{background:#cfe3f7}.chitem:hover{background:#e6f0fa}.chbody{flex:1;min-width:0}.cb{font-style:normal;background:#e6e6e6;border-radius:9px;padding:0 7px;margin-left:4px;font-size:11px}.prow{margin:2px 8px!important}
+dialog menu.fdm{flex-direction:row-reverse;justify-content:flex-start}
+#errbar{position:fixed;left:0;right:0;top:0;z-index:200;background:#b3261e;color:#fff;padding:8px 14px;display:flex;gap:12px;align-items:center}
+#errbar span{flex:1}
+#otext{width:min(720px,80vw);height:50vh;font:12px ui-monospace,Consolas,monospace}
+@media print{.titlebar,.toolbar,#left,#right,.sb,.acts{display:none!important}body{overflow:visible}#app{display:block;height:auto}.ws{display:block}#center{overflow:visible}}
+</style>
+</head>
+<body>
+<div id="errbar" hidden><span id="errtxt"></span><button class="btn" id="errreset">Reset saved project data</button><button class="btn" id="errx">Dismiss</button></div>
+
+<div id="login" hidden>
+  <form class="lcard" id="lform" autocomplete="off">
+    <h1>BusSmith</h1>
+    <div class="mut" id="lsub">KNX project and diagnostics tool</div>
+    <label>User ID<input id="lid" required></label>
+    <label id="lrowname" hidden>Display name<input id="lname"></label>
+    <label>Password<input id="lpw" type="password" required></label>
+    <label id="lrowpw2" hidden>Repeat password<input id="lpw2" type="password"></label>
+    <div id="lerr"></div>
+    <button class="btn pri" id="lbtn">Log in</button>
+    <p class="mut" style="margin:12px 0 0;font-size:12px" id="lnote"></p>
+  </form>
+</div>
+
+<div id="app" hidden>
+  <div class="titlebar">
+    <div class="brand">BusSmith</div>
+    <div class="ptitle"><b id="tpname">Project</b><small id="tpsub"></small></div>
+    <div class="tabs" id="tabs"></div>
+    <button class="tb" id="tabnew" title="New tab">+</button>
+    <div class="dw"><button class="tb" id="tablist" title="All tabs">&#8964;</button><div class="ddm"></div></div>
+  </div>
+
+  <div class="toolbar">
+    <button class="tb" id="nback" title="Back">&#8592;</button>
+    <button class="tb" id="nfwd" title="Forward">&#8594;</button>
+    <div class="crumbs" id="crumbs"></div>
+    <span class="sp"></span>
+    <div class="dw"><button class="tb" id="badd">+ Add &#9662;</button><div class="ddm r"></div></div>
+    <button class="tb" id="bren" title="Rename (F2)">&#9998; Rename</button>
+    <button class="tb" id="bdel">&#10005; Delete</button>
+    <button class="tb" id="bdl" disabled title="Download to devices is not available in this version">&#10515; Download</button>
+    <button class="tb" id="bundo">&#8630; Undo</button>
+    <div class="dw"><button class="tb" id="bpanels">&#9638; Panels &#9662;</button><div class="ddm r"></div></div>
+    <input id="gwip" type="hidden">
+    <button class="btn pri" id="mconn" title="Select the KNX interface (USB or ESP32)">Connect</button>
+    <span class="pill" id="gstat">disconnected</span>
+    <div class="dw"><button class="tb" id="buser" title="User">&#9786; &#9662;</button><div class="ddm r"></div></div>
+    <button class="tb" id="bset" title="Settings (Ctrl+,)">&#9881;</button>
+    <div class="dw"><button class="tb" id="bmore" title="More">&#8942;</button><div class="ddm r"></div></div>
+  </div>
+
+  <div class="ws" id="ws">
+    <aside id="left">
+      <div id="lhead"><div class="dw" style="flex:1;display:flex"><button class="lhb" id="lhbtn">Panel &#9662;</button><div class="ddm"></div></div><button class="tb" id="lclose" title="Hide panel">&#10005;</button></div>
+      <div id="rail"></div>
+      <div class="ltools"><input id="filter" placeholder="Search…"><button class="btn pri" id="addroot" title="Add">+</button></div>
+      <div id="tree"></div>
+    </aside>
+    <section id="center"></section>
+    <aside id="right">
+      <div id="rhead"></div>
+      <div id="rbody"></div>
+      <div id="rlist"></div>
+    </aside>
+  </div>
+
+  <div class="sb"><span id="sbmsg">Ready</span><span class="sp"></span><span id="sbsel"></span><span id="sbcount"></span><span id="sbuser"></span></div>
+</div>
+
+<dialog id="out"><form method="dialog">
+  <h3 id="ot"></h3><textarea id="otext" readonly></textarea>
+  <menu><button type="button" class="btn" id="ocopy">Copy</button><button type="button" class="btn" id="odl">Download</button><button class="btn" value="close">Close</button></menu>
+</form></dialog>
+<dialog id="fdlg"><form method="dialog">
+  <h3 id="fdt"></h3><div id="fdbody"></div>
+  <menu class="fdm"><button class="btn pri" value="ok">OK</button><button class="btn" value="cancel" formnovalidate>Cancel</button></menu>
+</form></dialog>
+<dialog id="cdlg"><form method="dialog">
+  <h3>Select Connection</h3>
+  <p class="mut" style="margin:0 0 8px">Choose the interface BusSmith should use to reach the KNX bus.</p>
+  <div id="clist"></div>
+  <p id="cwarn" class="mut" style="color:#c0392b"></p>
+  <div class="row" style="margin-top:8px"><button type="button" class="btn" id="cfind">Find USB interface…</button><input id="cip" placeholder="ESP32 gateway IP, e.g. 192.168.1.50" style="flex:1"><button type="button" class="btn" id="cadd">Add</button></div>
+  <label style="margin-top:10px"><input type="checkbox" id="cuse" checked style="display:inline;width:auto"> Use also for future connections</label>
+  <menu class="fdm"><button class="btn pri" value="ok" id="cok">Connect</button><button class="btn" value="cancel" formnovalidate>Cancel</button></menu>
+</form></dialog>
+<dialog id="pdlg"><form method="dialog">
+  <h3>Import product database</h3><p class="mut" id="pinfo" style="margin:0 0 8px"></p>
+  <input id="pfilter" placeholder="Filter by name, order number or manufacturer…" style="width:100%">
+  <div id="plist" style="max-height:320px;min-width:520px;overflow:auto;border:1px solid var(--b);margin:8px 0"></div>
+  <div class="row"><button type="button" class="btn" id="pall">Select shown</button><button type="button" class="btn" id="pnone">Clear</button><span id="pcount" class="mut"></span></div>
+  <menu class="fdm"><button class="btn pri" value="ok">Import selected</button><button class="btn" value="cancel" formnovalidate>Cancel</button></menu>
+</form></dialog>
+<dialog id="sdlg"><form method="dialog" class="sform">
+  <div class="shead"><h3>&#9881; Settings</h3><button class="btn" value="close">Close</button></div>
+  <div class="sbody"><nav id="snav"></nav><div id="spage"></div></div>
+</form></dialog>
+<dialog id="adlg"><form method="dialog">
+  <h3 id="adt"></h3><div id="adbody"></div>
+  <menu><button type="button" class="btn pri" id="adgo">Run</button><button class="btn" value="close">Close</button></menu>
+</form></dialog>
+<dialog id="udlg"><form method="dialog">
+  <h3>Users</h3><div id="ulist"></div>
+  <menu><button class="btn" type="button" id="uadd">Add user…</button><button class="btn" value="close">Close</button></menu>
+</form></dialog>
+<input type="file" id="file" accept=".json" hidden>
+<input type="file" id="kfile" accept=".knxproj,.zip" hidden>
+<input type="file" id="pfile" accept=".knxprod,.etsapp,.vd5,.vd4,.zip" hidden>
+<input type="file" id="afile" accept=".etsapp" hidden>
+
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const csvq=s=>`"${String(s==null?'':s).replace(/"/g,'""')}"`;
+const uid=()=>Math.random().toString(36).slice(2,9);
+const byNum=(a,b)=>a.num-b.num;
+const now=()=>Date.now();
+const fmt=t=>t?new Date(t).toLocaleString([],{hour12:false}):'–';
+
+/* ================= constants ================= */
+const PANELS=[{id:'build',title:'Buildings'},{id:'ga',title:'Group Addresses'},{id:'topo',title:'Topology'},{id:'root',title:'Project Root'},{id:'devices',title:'Devices'},{id:'reports',title:'Reports'},{id:'catalog',title:'Catalog'},{id:'diag',title:'Diagnostics'}];
+const PTITLE=Object.fromEntries(PANELS.map(p=>[p.id,p.title]));
+const S={garoot:{name:'Group Addresses'},toporoot:{name:'Topology'},broot:{name:'Buildings'},troot:{name:'Trades'},devroot:{name:'All Devices'},fComments:{name:'Addresses marked with comments'},fUnassigned:{name:'Addresses not assigned'}};
+const DT={gm:{id:'gm',name:'Group Monitor'},bm:{id:'bm',name:'Bus Monitor'},pa:{id:'pa',name:'Individual Addresses & Scan'},gv:{id:'gv',name:'Group Value Tool'},conn:{id:'conn',name:'Gateway Connection'}};
+const REPORTS=[{id:'summary',name:'Project Summary'},{id:'galist',name:'Group Address List'},{id:'devlist',name:'Device List'},{id:'links',name:'Group Address Links'},{id:'topology',name:'Topology Overview'},{id:'unused',name:'Unused Group Addresses'}];
+const KIND={main:'Main Group',mid:'Middle Group',ga:'Group Address',area:'Area',line:'Line',dev:'Device',bnode:'Building Part',garoot:'Group Addresses',gafolder:'Search Folder',toporoot:'Topology',broot:'Buildings',troot:'Trades',proj:'Project',devroot:'Devices',report:'Report',catmfr:'Manufacturer',cat:'Catalog Product',dtool:'Diagnostics'};
+const DPT_LIST=[['1.001','Switch'],['1.002','Boolean'],['1.008','Up/Down'],['1.009','Open/Close'],['3.007','Dimming control'],['5.001','Percentage (0-100%)'],['5.010','Counter pulses (0-255)'],['7.001','Pulses (16 bit)'],['7.005','Time (s)'],['7.600','Colour temperature (K)'],['9.001','Temperature (°C)'],['9.004','Illuminance (lx)'],['9.007','Humidity (%)'],['14.056','Power (W)'],['17.001','Scene number'],['232.600','Colour RGB']];
+const DPT_NAME=Object.fromEntries(DPT_LIST);
+const FW={'1.001':'T_SWITCH','5.001':'T_PERCENT','9.001':'T_TEMP'};
+const YT={'9.001':'temperature','9.004':'illuminance','9.007':'humidity','14.056':'power'};
+const STATUS=['Unknown','Loaded','Not loaded','Partially loaded'];
+const FLAGS='CRWTU';
+const LENS=['1 bit','2 bit','3 bit','4 bit','1 byte','2 bytes','3 bytes','4 bytes','6 bytes','8 bytes','10 bytes','14 bytes'];
+const PRIOS=['Low','High','Alarm','System'];
+const RANGE={main:[0,31],mid:[0,7],ga:[0,255],area:[0,15],line:[0,15],dev:[0,255]};
+
+/* ================= users / login ================= */
+const USERS_KEY='nlk.users';
+const getUsers=()=>{try{return JSON.parse(localStorage.getItem(USERS_KEY)||'[]');}catch(e){return [];}};
+const setUsers=u=>localStorage.setItem(USERS_KEY,JSON.stringify(u));
+async function hashPw(pw,salt){
+  if(window.crypto&&crypto.subtle){
+    const k=await crypto.subtle.importKey('raw',new TextEncoder().encode(pw),'PBKDF2',false,['deriveBits']);
+    const b=await crypto.subtle.deriveBits({name:'PBKDF2',salt:new TextEncoder().encode(salt),iterations:100000,hash:'SHA-256'},k,256);
+    return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');
+  }
+  let h=5381;const s=salt+pw;for(let i=0;i<s.length;i++)h=((h*33)^s.charCodeAt(i))>>>0;return 'weak'+h;   // fallback only when WebCrypto is missing
+}
+let ME=null;
+const canEdit=()=>!!ME&&ME.role!=='viewer';
+function guard(){if(canEdit())return true;alert('You are logged in as a viewer. Ask an administrator for editor rights.');return false;}
+function showLogin(){
+  $('#app').hidden=true;$('#login').hidden=false;
+  const first=!getUsers().length;
+  $('#lrowname').hidden=!first;$('#lrowpw2').hidden=!first;
+  $('#lbtn').textContent=first?'Create administrator':'Log in';
+  $('#lsub').textContent=first?'First start: create the administrator account':'KNX project and diagnostics tool';
+  $('#lnote').textContent=first?'This account is stored only in this browser.':'';
+  $('#lerr').textContent='';$('#lpw').value='';$('#lpw2').value='';
+}
+$('#lform').onsubmit=async e=>{
+  e.preventDefault();
+  const id=$('#lid').value.trim(),pw=$('#lpw').value,err=m=>{$('#lerr').textContent=m;};
+  const us=getUsers();
+  if(!us.length){
+    if(!id||pw.length<4)return err('Enter a user ID and a password of at least 4 characters.');
+    if(pw!==$('#lpw2').value)return err('The passwords do not match.');
+    const salt=uid()+uid();
+    us.push({id,name:$('#lname').value.trim()||id,role:'admin',salt,hash:await hashPw(pw,salt)});
+    setUsers(us);return enter(us[0]);
+  }
+  const u=us.find(x=>x.id.toLowerCase()===id.toLowerCase());
+  if(!u||(await hashPw(pw,u.salt))!==u.hash)return err('Wrong user ID or password.');
+  enter(u);
+};
+function enter(u){
+  ME={id:u.id,name:u.name,role:u.role};
+  sessionStorage.setItem('nlk.session',u.id);
+  $('#login').hidden=true;$('#app').hidden=false;$('#lpw').value='';
+  startApp();
+}
+function logout(){sessionStorage.removeItem('nlk.session');ME=null;closeMenus();showLogin();}
+
+/* ================= form dialog ================= */
+function formDlg(title,fields){
+  $('#fdt').textContent=title;
+  $('#fdbody').innerHTML=fields.map(f=>`<label>${esc(f.label)}${f.type==='select'?`<select id="fd_${f.id}">${f.options.map(o=>`<option value="${esc(o[0])}" ${String(o[0])===String(f.value)?'selected':''}>${esc(o[1])}</option>`).join('')}</select>`:`<input id="fd_${f.id}" type="${f.type||'text'}" value="${esc(f.value==null?'':f.value)}" ${f.req?'required':''}>`}</label>`).join('');
+  const d=$('#fdlg');d.showModal();
+  return new Promise(res=>{d.onclose=()=>{if(d.returnValue!=='ok')return res(null);const o={};fields.forEach(f=>o[f.id]=$('#fd_'+f.id).value);res(o);};});
+}
+
+/* ================= project data ================= */
+const PKEY='nlk.project';
+function fixObj(x,i){
+  x.num=x.num==null?i+1:x.num;x.name=x.name||'Object';x.func=x.func||'';x.len=x.len||'1 bit';
+  if(x.flags==null)x.flags={s:'CRT',r:'CW',rw:'CRWT'}[x.dir]||'CRWT';
+  delete x.dir;x.dpt=x.dpt||'';x.prio=x.prio||'Low';x.ga=x.ga||'';x.links=x.links||[];
+}
+function seedCatalog(){
+  const O=(name,func,len,flags,dpt)=>({name,func,len,flags,dpt,prio:'Low',ga:'',links:[]});
+  const rep=(n,f)=>{const r=[];for(let i=1;i<=n;i++)r.push(...f(i));return r;};
+  const mk=(name,orderNo,desc,objs)=>({id:uid(),mfr:'Generic',name,orderNo,desc,objs});
+  return [
+    mk('Switch actuator 4-fold','GEN-SA4','4-channel switching actuator',rep(4,i=>[O(`Channel ${i}: Switch`,'On/Off','1 bit','CW','1.001'),O(`Channel ${i}: Status`,'Status','1 bit','CRT','1.001')])),
+    mk('Push button 4-fold','GEN-PB4','4-button wall switch',rep(4,i=>[O(`Button ${i}: Switch`,'On/Off','1 bit','CT','1.001')])),
+    mk('Dimmer actuator 2-fold','GEN-DA2','2-channel dimmer',rep(2,i=>[O(`Channel ${i}: Switch`,'On/Off','1 bit','CW','1.001'),O(`Channel ${i}: Dimming value`,'Absolute dimming','1 byte','CW','5.001'),O(`Channel ${i}: Status`,'Status','1 bit','CRT','1.001')])),
+    mk('Blind actuator 2-fold','GEN-BA2','2-channel blind/shutter actuator',rep(2,i=>[O(`Channel ${i}: Move`,'Up/Down','1 bit','CW','1.008'),O(`Channel ${i}: Position`,'Absolute position','1 byte','CW','5.001'),O(`Channel ${i}: Position status`,'Status','1 byte','CRT','5.001')])),
+    mk('Temperature sensor','GEN-TS1','Room temperature sensor',[O('Temperature','Temperature','2 bytes','CRT','9.001')])
+  ];
+}
+function fix(p){
+  p=p||{};p.name=p.name||'New project';p.number=p.number||'';p.client=p.client||'';p.desc=p.desc||'';p.cre=p.cre||now();p.creBy=p.creBy||'';
+  p.mains=p.mains||[];
+  p.mains.forEach(m=>{m.desc=m.desc||'';m.pass=m.pass||'No';m.comments=m.comments||[];m.mids=m.mids||[];m.mids.forEach(d=>{d.desc=d.desc||'';d.pass=d.pass||'No';d.comments=d.comments||[];d.gas=d.gas||[];d.gas.forEach(g=>{g.desc=g.desc||'';g.dpt=g.dpt||'';g.comments=g.comments||[];});});});
+  p.topo=p.topo||{areas:[]};p.topo.areas=p.topo.areas||[];
+  p.topo.areas.forEach(a=>{a.desc=a.desc||'';a.comments=a.comments||[];a.lines=a.lines||[];a.lines.forEach(l=>{l.desc=l.desc||'';l.comments=l.comments||[];l.devices=l.devices||[];l.devices.forEach(v=>{v.desc=v.desc||'';v.comments=v.comments||[];v.status=v.status||'Unknown';v.serial=v.serial||'';v.dl=v.dl||'';v.mfr=v.mfr||'';v.product=v.product||'';v.orderNo=v.orderNo||'';v.params=v.params||[];v.channels=v.channels||[];v.dca=v.dca||'';v.appId=v.appId||'';v.objs=v.objs||[];v.objs.forEach(fixObj);});});});
+  p.build=p.build||[];
+  const fb=n=>{n.id=n.id||uid();n.desc=n.desc||'';n.comments=n.comments||[];n.kids=n.kids||[];n.devs=n.devs||[];n.kids.forEach(fb);};p.build.forEach(fb);
+  if(!p.catalog)p.catalog=seedCatalog();
+  p.catalog.forEach(c=>{c.id=c.id||uid();c.desc=c.desc||'';c.mfr=c.mfr||'';c.orderNo=c.orderNo||'';c.comments=c.comments||[];c.objs=c.objs||[];c.params=c.params||[];c.channels=c.channels||[];c.dca=c.dca||'';c.appId=c.appId||'';c.objs.forEach(fixObj);});
+  p.todos=p.todos||[];p.comments=p.comments||[];
+  return p;
+}
+let P=fix(JSON.parse(localStorage.getItem(PKEY)||'null'));
+let hist=[{s:JSON.stringify(P),label:'Initial state',time:now(),by:''}],hi=0;
+let mode='ga',sel=null,cref=[],reg=[],devtab='ch';
+const opened=new Set(Object.values(S));
+const live={};const msgs=[];const ops=[];
+let gaMap,gaByStr,gaParent,devMap,devByAddr,devParent,devLine,lineArea,linkMap;
+function index(){
+  gaMap=new Map();gaByStr=new Map();gaParent=new Map();devMap=new Map();devByAddr=new Map();devParent=new Map();devLine=new Map();lineArea=new Map();linkMap=new Map();
+  P.mains.forEach(m=>m.mids.forEach(d=>d.gas.forEach(g=>{const s=`${m.num}/${d.num}/${g.num}`;gaMap.set(g,s);gaByStr.set(s,g);gaParent.set(g,d.gas);})));
+  P.topo.areas.forEach(a=>a.lines.forEach(l=>{lineArea.set(l,a);l.devices.forEach(v=>{const s=`${a.num}.${l.num}.${v.num}`;devMap.set(v,s);devByAddr.set(s,v);devParent.set(v,l.devices);devLine.set(v,{a,l});});}));
+  devMap.forEach((s,v)=>v.objs.forEach(x=>{[x.ga,...x.links].filter(Boolean).forEach(g=>{if(!linkMap.has(g))linkMap.set(g,[]);linkMap.get(g).push({dev:v,obj:x});});}));
+}
+const allGA=()=>[...gaMap].map(([g,s])=>({ga:s,name:g.name,dpt:g.dpt}));
+const allDevs=()=>[...devMap].map(([v,s])=>({addr:s,name:v.name,dev:v}));
+function touch(o){if(o){o.mod=now();o.modBy=ME?ME.id:'';}}
+function commit(label){
+  let s=JSON.stringify(P);
+  if(s!==hist[hi].s){
+    P.modified=now();P.modBy=ME?ME.id:'';s=JSON.stringify(P);
+    hist=hist.slice(0,hi+1);hist.push({s,label:label||'Change',time:now(),by:ME?ME.id:''});hi=hist.length-1;
+    const cap=s.length>1500000?10:s.length>400000?40:150;while(hist.length>cap){hist.shift();hi--;}
+  }
+  try{localStorage.setItem(PKEY,s);}catch(e){try{msg('Project is too big to auto-save in the browser. Use ⋮ → Save project to file.');}catch(x){}}
+}
+function jump(i){
+  if(i<0||i>=hist.length||!guard())return;
+  hi=i;P=fix(JSON.parse(hist[hi].s));try{localStorage.setItem(PKEY,hist[hi].s);}catch(e){}
+  sel=null;opened.add(S.garoot);renderAll();
+}
+function renumber(fn){
+  const oldG=new Map(gaMap),oldD=new Map(devMap);fn();index();
+  const gm=new Map();oldG.forEach((s,o)=>{if(gaMap.has(o))gm.set(s,gaMap.get(o));});
+  const dm=new Map();oldD.forEach((s,o)=>{if(devMap.has(o))dm.set(s,devMap.get(o));});
+  devMap.forEach(v=>v.objs.forEach(x=>{if(x.ga&&gm.has(x.ga))x.ga=gm.get(x.ga);x.links=x.links.map(l=>gm.get(l)||l);}));
+  const fb=n=>{n.devs=n.devs.map(a=>dm.get(a)||a);n.kids.forEach(fb);};P.build.forEach(fb);
+  index();
+}
+function cleanup(){
+  index();
+  devMap.forEach(v=>v.objs.forEach(x=>{if(x.ga&&!gaByStr.has(x.ga))x.ga='';x.links=x.links.filter(l=>gaByStr.has(l));}));
+  const fb=n=>{n.devs=n.devs.filter(a=>devByAddr.has(a));n.kids.forEach(fb);};P.build.forEach(fb);
+}
+function nextNum(arr,max,start){const u=new Set(arr.map(x=>x.num));for(let i=start||0;i<=max;i++)if(!u.has(i))return i;return -1;}
+function addTo(arr,max,obj,start){const n=nextNum(arr,max,start);if(n<0){alert('No free number left here.');return null;}obj.num=n;obj.cre=now();arr.push(obj);arr.sort(byNum);return obj;}
+
+/* ================= value decode / encode ================= */
+function dpt9(h,l){let m=((h&7)<<8)|l;if(h&0x80)m-=2048;return 0.01*m*(1<<((h>>3)&15));}
+function enc9(v){let m=Math.round(v*100),e=0;while(m<-2048||m>2047){m=Math.round(m/2);e++;}const h=((m<0)?0x80:0)|(e<<3)|((m>>8)&7),l=m&255;return h.toString(16).padStart(2,'0')+l.toString(16).padStart(2,'0');}
+function decodeVal(dpt,b){
+  if(!dpt||!b.length)return '';
+  const [m,s]=dpt.split('.');
+  if(m==='1'){const lab={'001':['Off','On'],'002':['False','True'],'008':['Up','Down'],'009':['Open','Close']}[s]||['0','1'];return lab[b[0]&1];}
+  if(m==='3'&&b.length===1){const v=b[0]&15;return (v&8?'Increase':'Decrease')+((v&7)?' step '+(v&7):' (stop)');}
+  if(m==='5'&&b.length===1)return s==='001'?Math.round(b[0]*100/255)+' %':String(b[0]);
+  if(m==='7'&&b.length===2)return ((b[0]<<8)|b[1])+({'600':' K','005':' s'}[s]||'');
+  if(m==='9'&&b.length===2){const u={'001':' °C','004':' lx','007':' %'}[s]||'';return dpt9(b[0],b[1]).toFixed(2)+u;}
+  if(m==='14'&&b.length===4){const dv=new DataView(new Uint8Array(b).buffer);return dv.getFloat32(0).toFixed(2)+(s==='056'?' W':'');}
+  if(m==='17'&&b.length===1)return 'Scene '+((b[0]&63)+1);
+  if(m==='232'&&b.length===3)return '#'+b.map(x=>x.toString(16).padStart(2,'0')).join('');
+  return '';
+}
+function encodeVal(dpt,val){
+  val=String(val).trim();
+  if(dpt==='5.001'){const v=Math.max(0,Math.min(100,parseFloat(val)));if(isNaN(v))return null;return 'b '+Math.round(v*255/100).toString(16).padStart(2,'0');}
+  if(dpt&&dpt.startsWith('7.')){const v=Math.round(parseFloat(val));if(isNaN(v)||v<0||v>65535)return null;return 'b '+v.toString(16).padStart(4,'0');}
+  if(dpt&&dpt.startsWith('9.')){const v=parseFloat(val);if(isNaN(v))return null;return 'b '+enc9(v);}
+  if(dpt==='17.001'){const v=parseInt(val,10);if(isNaN(v)||v<1||v>64)return null;return 'b '+(v-1).toString(16).padStart(2,'0');}
+  const hx=val.replace(/[^0-9a-f]/gi,'');if(!hx||hx.length%2)return null;return 'b '+hx;
+}
+
+/* ================= favourites, tabs, navigation ================= */
+const favKey=()=>'nlk.fav.'+(ME?ME.id:'');
+let favs=['build','ga','topo','diag'];
+function loadFavs(){try{const f=JSON.parse(localStorage.getItem(favKey())||'null');if(Array.isArray(f))favs=f.filter(x=>PTITLE[x]);else favs=['build','ga','topo','diag'];}catch(e){favs=['build','ga','topo','diag'];}}
+function saveFavs(){localStorage.setItem(favKey(),JSON.stringify(favs));}
+function toggleFav(id){favs=favs.includes(id)?favs.filter(x=>x!==id):[...favs,id];saveFavs();renderLeftHead();if(menuBuilder)refreshMenu();}
+
+let tabs=[{id:uid(),panel:'ga',sel:null,devtab:'ch'}],ti=0;
+function saveTab(){const t=tabs[ti];t.panel=mode;t.sel=sel;t.devtab=devtab;}
+function loadTab(i){ti=i;const t=tabs[i];mode=t.panel;sel=t.sel;devtab=t.devtab||'ch';renderAll();}
+function switchTab(i){if(i===ti||!tabs[i])return;saveTab();loadTab(i);}
+function newTab(panel){saveTab();tabs.push({id:uid(),panel:panel||mode,sel:null,devtab:'ch'});ti=tabs.length-1;if(panel)mode=panel;setPanel(mode);}
+function closeTab(i){if(tabs.length<2)return;saveTab();tabs.splice(i,1);ti=Math.min(i<ti?ti-1:ti,tabs.length-1);loadTab(ti);}
+function renderTabs(){
+  $('#tabs').innerHTML=tabs.map((t,i)=>`<div class="tab ${i===ti?'on':''}" data-ti="${i}"><span>${esc(P.name)}</span><small>${esc(PTITLE[i===ti?mode:t.panel])}</small>${tabs.length>1?`<b data-tc="${i}">&#10005;</b>`:''}</div>`).join('');
+  $('#tpname').textContent=P.name;$('#tpsub').textContent=PTITLE[mode];
+}
+$('#tabs').addEventListener('click',e=>{const c=e.target.closest('[data-tc]');if(c){closeTab(+c.dataset.tc);return;}const t=e.target.closest('[data-ti]');if(t)switchTab(+t.dataset.ti);});
+$('#tabnew').onclick=()=>newTab();
+
+let nav=[],ni=-1,navigating=false;
+function navPush(){if(navigating)return;nav=nav.slice(0,ni+1);nav.push({mode,sel});ni=nav.length-1;if(nav.length>80){nav.shift();ni--;}}
+function navGo(d){const j=ni+d;if(j<0||j>=nav.length)return;ni=j;navigating=true;mode=nav[j].mode;sel=nav[j].sel;renderAll();navigating=false;}
+$('#nback').onclick=()=>navGo(-1);$('#nfwd').onclick=()=>navGo(1);
+
+function setPanel(id){
+  mode=id;
+  const roots={ga:['garoot',S.garoot],topo:['toporoot',S.toporoot],build:['broot',S.broot],devices:['devroot',S.devroot],root:['proj',P],diag:['dtool',DT.gm],reports:['report',REPORTS[0]]};
+  const r=roots[id];sel=r?{k:r[0],o:r[1],p:null,from:null}:null;
+  $('#filter').value='';navPush();renderAll();
+}
+function select(k,o,p,from){
+  sel={k,o,p:p||(k==='dev'?devParent.get(o):null),from:from||null};
+  navPush();renderAll();
+}
+
+/* ================= tree ================= */
+const mfrCache=new Map();const mfrObj=n=>{if(!mfrCache.has(n))mfrCache.set(n,{name:n});return mfrCache.get(n);};
+function treeData(){
+  const dv=(v,from)=>({k:'dev',o:v,p:devParent.get(v),from,ic:'v',label:`${devMap.get(v)}  ${v.name}`,kids:[]});
+  switch(mode){
+  case 'ga':{
+    const withC=[...gaMap.keys()].filter(g=>g.comments&&g.comments.length).length;
+    const unas=[...gaMap.values()].filter(s=>!linkMap.has(s)).length;
+    return [{k:'gafolder',o:S.fComments,ic:'f',label:`${withC}  ${S.fComments.name}`,kids:[]},{k:'gafolder',o:S.fUnassigned,ic:'f',label:`${unas}  ${S.fUnassigned.name}`,kids:[]},
+      {k:'garoot',o:S.garoot,ic:'g',label:'Group Addresses',kids:P.mains.map(m=>({k:'main',o:m,p:P.mains,ic:'m',label:`${m.num}  ${m.name}`,kids:m.mids.map(d=>({k:'mid',o:d,p:m.mids,ic:'d',label:`${m.num}/${d.num}  ${d.name}`,kids:d.gas.map(g=>({k:'ga',o:g,p:d.gas,ic:'g',label:`${gaMap.get(g)}  ${g.name}`,kids:[]}))}))}))}];}
+  case 'topo':return [{k:'toporoot',o:S.toporoot,ic:'a',label:'Topology',kids:P.topo.areas.map(a=>({k:'area',o:a,p:P.topo.areas,ic:'a',label:`${a.num}  ${a.name}`,kids:a.lines.map(l=>({k:'line',o:l,p:a.lines,ic:'l',label:`${a.num}.${l.num}  ${l.name}`,kids:l.devices.map(v=>dv(v))}))}))}];
+  case 'build':{
+    const bt=(arr,flt)=>arr.filter(n=>!flt||flt(n)).map(n=>({k:'bnode',o:n,p:arr,ic:'b',label:n.name||'(unnamed)',kids:[...bt(n.kids),...n.devs.map(a=>devByAddr.get(a)).filter(Boolean).map(v=>dv(v,n))]}));
+    return [{k:'broot',o:S.broot,ic:'b',label:'Buildings',kids:bt(P.build,n=>!n.trade)},{k:'troot',o:S.troot,ic:'b',label:'Trades',kids:bt(P.build,n=>n.trade)}];}
+  case 'root':return [{k:'proj',o:P,ic:'m',label:P.name,kids:[]}];
+  case 'devices':return [{k:'devroot',o:S.devroot,ic:'v',label:'All Devices',kids:[...devMap.keys()].map(v=>dv(v))}];
+  case 'reports':return REPORTS.map(r=>({k:'report',o:r,ic:'r',label:r.name,kids:[]}));
+  case 'catalog':{
+    const mf=new Map();P.catalog.forEach(c=>{const m=c.mfr||'Unknown';if(!mf.has(m))mf.set(m,[]);mf.get(m).push(c);});
+    return [...mf].map(([m,list])=>({k:'catmfr',o:mfrObj(m),ic:'m',label:m,kids:list.map(c=>({k:'cat',o:c,p:P.catalog,ic:'v',label:c.name,kids:[]}))}));}
+  case 'diag':return Object.values(DT).map(t=>({k:'dtool',o:t,ic:'t',label:t.name,kids:[]}));
+  }
+  return [];
+}
+function renderTree(){
+  const f=$('#filter').value.trim().toLowerCase();
+  const nodes=treeData();reg=[];
+  const match=n=>!f||n.label.toLowerCase().includes(f)||n.kids.some(match);
+  const row=(n,depth)=>{
+    if(!match(n))return '';
+    const i=reg.push(n)-1,has=n.kids.length>0,isOpen=!!f||opened.has(n.o)||n.k==='catmfr';
+    const on=sel&&sel.o===n.o&&(sel.from||null)===(n.from||null);
+    let h=`<div class="tn${on?' on':''}" data-i="${i}" style="padding-left:${6+depth*16}px"><span class="chev" data-chev="${i}">${has?(isOpen?'▾':'▸'):''}</span><span class="ic ${n.ic}"></span><span class="lbl">${esc(n.label)}</span></div>`;
+    if(has&&isOpen)h+=n.kids.map(k=>row(k,depth+1)).join('');
+    return h;
+  };
+  $('#tree').innerHTML=nodes.length?nodes.map(n=>row(n,0)).join(''):'<p class="mut pad">Nothing here yet.</p>';
+}
+$('#tree').addEventListener('click',e=>{
+  const c=e.target.closest('[data-chev]');
+  if(c){const n=reg[+c.dataset.chev];if(opened.has(n.o))opened.delete(n.o);else opened.add(n.o);renderTree();return;}
+  const t=e.target.closest('.tn');if(!t)return;
+  const n=reg[+t.dataset.i];
+  const again=lastTreeClick.o===n.o&&now()-lastTreeClick.t<450;   // the tree is rebuilt on every click, so the browser's own double-click event never fires
+  lastTreeClick=again?{o:null,t:0}:{o:n.o,t:now()};
+  select(n.k,n.o,n.p,n.from);
+  if(again)renameSel();
+});
+let lastTreeClick={o:null,t:0};
+/* ================= right-click menu on a device (like ETS) ================= */
+let devClip=null;
+const CI=(id,label,x)=>`<div class="mi ${x&&x.dis?'dis':''}" data-ctx="${id}" ${x&&x.tip?'title="'+esc(x.tip)+'"':''}><span>${label}</span>${x&&x.right?'<span class="mut">'+x.right+'</span>':''}</div>`;
+const CSUB=(label,inner)=>`<div class="mi has"><span>${label}</span><span>&#9656;</span><div class="sm">${inner}</div></div>`;
+const NOTYET='Not available in BusSmith yet. Use ETS for this.';
+function ctxHTML(){
+  const ed=canEdit(),no={dis:true,tip:NOTYET},usb_=!!usb;
+  return CSUB('Download',CI('dl:all','Download All',{...no,right:'Ctrl+Shift+L'})+CI('dl:part','Partial download',{...no,right:'Ctrl+D'})+CI('dl:ind','Download Individual Address',{dis:!ed||!usb_,right:'Ctrl+Shift+I',tip:usb_?'':'Connect the USB interface first'})+CI('dl:over','Overwrite Individual Address',{dis:!ed||!usb_,right:'Ctrl+Shift+Alt+I'})+CI('dl:app','Download Application',{...no,right:'Ctrl+Shift+Alt+D'}))+
+    CSUB('Unload',CI('ul:all','Unload Application',no)+CI('ul:pa','Unload Individual Address',no))+
+    CSUB('Info',CI('in:dev','Device info',{dis:!usb_,tip:usb_?'':'Connect the USB interface first'})+CI('in:links','Group links from device',{dis:!usb_||!ed})+CI('in:ctl','Live control',{}))+
+    CI('restart','Restart Device',{dis:!usb_,right:'Ctrl+R'})+'<hr>'+
+    CI('compare','Compare Device',{})+CI('labels','Print Labels',{})+CI('xfer','Transfer Parameters and Flags',no)+CI('park','Park',no)+
+    CI('unlink','Unlink',{dis:!ed})+CI('tpl','Add To Device Templates',no)+'<hr>'+
+    CI('del','Delete',{dis:!ed,right:'Del'})+'<hr>'+
+    CI('cut','Cut',{dis:!ed,right:'Ctrl+X'})+CI('copy','Copy',{right:'Ctrl+C'})+CI('paste','Paste',{dis:!ed||!devClip,right:'Ctrl+V'})+CI('pspec','Paste Special',no)+CI('pext','Paste Extended',no)+'<hr>'+
+    CI('props','Properties',{right:'Alt+Enter'});
+}
+function hideCtx(){const m=document.getElementById('ctxm');if(m)m.remove();}
+$('#tree').addEventListener('contextmenu',e=>{
+  const t=e.target.closest('.tn');if(!t)return;
+  const n=reg[+t.dataset.i];if(!n||n.k!=='dev')return;
+  e.preventDefault();hideCtx();
+  select(n.k,n.o,n.p,n.from);
+  const m=document.createElement('div');m.id='ctxm';m.innerHTML=ctxHTML();document.body.appendChild(m);
+  const W=innerWidth,H=innerHeight;m.style.left=Math.min(e.clientX,W-300)+'px';m.style.top=Math.max(4,Math.min(e.clientY,H-m.offsetHeight-8))+'px';
+});
+document.addEventListener('click',e=>{
+  const c=e.target.closest('[data-ctx]');
+  if(c&&!c.classList.contains('dis')){const id=c.dataset.ctx;hideCtx();ctxAct(id);return;}
+  if(!e.target.closest('#ctxm'))hideCtx();
+},true);
+document.addEventListener('keydown',e=>{if(e.key==='Escape')hideCtx();});
+function ctxAct(id){
+  const d=sel&&sel.k==='dev'?sel.o:null;if(!d)return;
+  const a=devMap.get(d),dsl={dataset:{addr:a}};
+  switch(id){
+  case 'dl:ind':case 'dl:over':act('progaddr',dsl);break;
+  case 'in:dev':act('devinfo',dsl);break;
+  case 'in:links':act('devassoc',dsl);break;
+  case 'in:ctl':devtab='ctl';renderCenter();break;
+  case 'restart':act('devrestart',dsl);break;
+  case 'compare':openApp('compare');break;
+  case 'labels':openApp('labels');break;
+  case 'unlink':
+    if(!confirm('Remove all group address links of "'+d.name+'"?'))break;
+    d.objs.forEach(x=>{x.ga='';x.links=[];});commit('Unlink '+a);renderAll();msg('Unlinked '+a);break;
+  case 'del':act('del');break;
+  case 'copy':case 'cut':
+    devClip=JSON.parse(JSON.stringify(d));msg((id==='cut'?'Cut ':'Copied ')+a);
+    if(id==='cut'&&canEdit()){sel.p.splice(sel.p.indexOf(d),1);sel=null;cleanup();commit('Cut device');renderAll();}
+    break;
+  case 'paste':{
+    const ln=(devLine.get(d)||{}).l;if(!devClip||!ln)break;
+    const c=JSON.parse(JSON.stringify(devClip));c.objs.forEach(x=>{x.ga='';x.links=[];});c.serial='';c.cre=now();
+    const o=addTo(ln.devices,255,c,1);if(!o)break;
+    commit('Paste device');index();renderAll();msg('Pasted as '+devMap.get(o));break;}
+  case 'props':$('#ws').classList.remove('noright');rmode='props';renderRight();break;
+  }
+}
+
+
+$('#filter').oninput=renderTree;
+
+/* ================= left header + rail ================= */
+function renderLeftHead(){
+  $('#lhbtn').innerHTML=esc(PTITLE[mode])+' &#9662;';
+  $('#rail').innerHTML=favs.map(id=>`<div class="rl ${id===mode?'on':''}" data-rail="${id}"><span class="ic t"></span>${esc(PTITLE[id])}<span class="star">&#9733;</span></div>`).join('');
+  const ar={ga:1,topo:1,build:1,catalog:1,devices:1}[mode];
+  $('#addroot').style.display=ar&&canEdit()?'':'none';
+}
+$('#rail').addEventListener('click',e=>{const r=e.target.closest('[data-rail]');if(r)setPanel(r.dataset.rail);});
+$('#addroot').onclick=()=>act({ga:'addMain',topo:'addArea',build:'addBRoot',catalog:'addProd',devices:'addDev'}[mode]);
+$('#lclose').onclick=()=>{$('#ws').classList.add('noleft');};
+
+/* ================= dropdown menus ================= */
+let menuBuilder=null,menuBtn=null;
+function closeMenus(){document.querySelectorAll('.ddm.open').forEach(x=>x.classList.remove('open'));menuBuilder=null;menuBtn=null;}
+function refreshMenu(){if(menuBuilder&&menuBtn){const m=menuBtn.parentElement.querySelector('.ddm');m.innerHTML=menuBuilder();}}
+function bindMenu(btnId,builder){
+  $(btnId).addEventListener('click',e=>{
+    e.stopPropagation();
+    const m=e.currentTarget.parentElement.querySelector('.ddm');
+    const was=m.classList.contains('open');closeMenus();
+    if(was)return;
+    menuBuilder=builder;menuBtn=e.currentTarget;m.innerHTML=builder();m.classList.add('open');
+  });
+}
+document.addEventListener('click',e=>{
+  const st=e.target.closest('[data-star]');
+  if(st){e.stopPropagation();toggleFav(st.dataset.star);return;}
+  const mi=e.target.closest('[data-mi]');
+  if(mi&&!mi.classList.contains('has')){const id=mi.dataset.mi;closeMenus();menuAct(id);return;}
+  if(!e.target.closest('.dw'))closeMenus();
+});
+const MI=(id,label,x)=>`<div class="mi ${x&&x.dis?'dis':''}" data-mi="${id}"><span>${label}</span>${x&&x.right?x.right:''}</div>`;
+const MSUB=(label,inner)=>`<div class="mi has"><span>${label}</span><span>&#9656;</span><div class="sm">${inner}</div></div>`;
+
+function leftMenu(){
+  const appsItems=MI('m:import','Import ETS project (.knxproj)…')+MI('m:impprod','Import product database (.etsapp / .knxprod / .vd5)…')+MI('m:expH','Export ESP32 config.h…')+MI('m:expY','Export Home Assistant YAML…')+MI('gotool:gv','Group Value Tool')+MI('gotool:pa','Individual Address Tools')+'<hr>'+BUILTIN.map(a=>MI('app:'+a.id,esc(a.name))).join('')+MI('app:settings','ETS Apps…');
+  return MSUB('All Panels',PANELS.map(p=>MI('panel:'+p.id,esc(p.title),{right:`<span class="star" data-star="${p.id}">${favs.includes(p.id)?'&#9733;':'&#9734;'}</span>`})).join(''))+
+    MSUB('Apps',appsItems)+'<hr>'+MI('newtab','Open as New Tab')+MI('newwin','Open as New Window')+'<hr>'+
+    MI('up','Move Up',{dis:!favs.includes(mode)||favs.indexOf(mode)===0})+MI('down','Move Down',{dis:!favs.includes(mode)||favs.indexOf(mode)===favs.length-1});
+}
+bindMenu('#lhbtn',leftMenu);
+
+function panelsMenu(){
+  const L=!$('#ws').classList.contains('noleft'),R=!$('#ws').classList.contains('noright');
+  return MI('lay:left',(L?'&#10003; ':'&nbsp;&nbsp;&nbsp;')+'Left panel')+MI('lay:right',(R?'&#10003; ':'&nbsp;&nbsp;&nbsp;')+'Properties panel')+'<hr>'+
+    PANELS.map(p=>MI('newtab:'+p.id,'Open '+esc(p.title)+' in new tab')).join('')+'<hr>'+MI('lay:reset','Reset layout');
+}
+bindMenu('#bpanels',panelsMenu);
+
+function userMenu(){
+  return `<div class="hd">${esc(ME.name)} (${esc(ME.id)})<br><small>${esc({admin:'Administrator',editor:'Editor',viewer:'Viewer'}[ME.role])}</small></div>`+
+    MI('u:pw','Change password…')+(ME.role==='admin'?MI('u:manage','Manage users…'):'')+'<hr>'+MI('u:logout','Log out');
+}
+bindMenu('#buser',userMenu);
+
+function moreMenu(){
+  return MI('m:new','New project')+MI('m:open','Open project…')+MI('m:save','Save project to file<i class="mut"> Ctrl+S</i>')+'<hr>'+MI('m:import','Import ETS project (.knxproj)…')+MI('m:impprod','Import product database (.etsapp / .knxprod / .vd5)…')+'<hr>'+
+    MI('m:expH','Export ESP32 config.h…')+MI('m:expY','Export Home Assistant YAML…')+MI('m:expG','Export group addresses (CSV)…')+MI('m:expD','Export devices (CSV)…')+MI('m:expL','Export group links (CSV)…')+'<hr>'+MI('m:settings','Settings…<i class="mut"> Ctrl+,</i>')+MI('m:about','About BusSmith');
+}
+bindMenu('#bmore',moreMenu);
+
+function addMenu(){
+  if(!canEdit())return MI('x','You are a viewer',{dis:true});
+  const L=[];
+  if(mode==='ga'){L.push(['Main Group','addMain']);if(sel&&sel.k==='main')L.push(['Middle Group','addMid']);if(sel&&sel.k==='mid')L.push(['Group Address','addGA']);}
+  if(mode==='topo'){L.push(['Area','addArea']);if(sel&&sel.k==='area')L.push(['Line','addLine']);}
+  if(mode==='topo'||mode==='build'||mode==='devices')L.push(['Device','addDev']);
+  if(mode==='build'){L.push(['Building','addBRoot']);L.push(['Trade','addT']);if(sel&&sel.k==='bnode'){L.push(['Floor','addFloor']);L.push(['Room','addRoom']);L.push(['Distribution board','addBoard']);L.push(['Corridor','addCorridor']);L.push(['Stairway','addStair']);L.push(['Cabinet','addCabinet']);L.push(['Other part','addB']);}}
+  if(mode==='catalog'){L.push(['Product','addProd']);L.push(['Import product database…','impProd']);}
+  if(sel&&(sel.k==='dev'||sel.k==='cat')){L.push(['Group Object','addObj']);}
+  if(sel&&sel.k==='dev')L.push(['Parameter','addParam']);
+  L.push(['To-do item','todoNew']);
+  return L.map(([l,a])=>MI('add:'+a,l)).join('');
+}
+bindMenu('#badd',addMenu);
+bindMenu('#tablist',()=>tabs.map((t,i)=>MI('tab:'+i,esc(P.name)+' – '+esc(PTITLE[i===ti?mode:t.panel]))).join(''));
+
+function menuAct(id){
+  const [a,b]=[id.split(':')[0],id.split(':').slice(1).join(':')];
+  switch(a){
+  case 'panel':setPanel(b);break;
+  case 'newtab':newTab(b||undefined);break;
+  case 'newwin':window.open(location.href,'_blank');break;
+  case 'up':case 'down':{const i=favs.indexOf(mode);if(i<0)break;const j=a==='up'?i-1:i+1;if(j<0||j>=favs.length)break;[favs[i],favs[j]]=[favs[j],favs[i]];saveFavs();renderLeftHead();break;}
+  case 'gotool':setPanel('diag');sel={k:'dtool',o:DT[b],p:null,from:null};renderAll();break;
+  case 'tab':switchTab(+b);break;
+  case 'add':act(b);break;
+  case 'lay':
+    if(b==='left')$('#ws').classList.toggle('noleft');else if(b==='right')$('#ws').classList.toggle('noright');else $('#ws').classList.remove('noleft','noright');break;
+  case 'u':userAct(b);break;
+  case 'm':fileAct(b);break;
+  case 'app':if(b==='settings')openSettings('apps');else openApp(b);break;
+  }
+}
+function userAct(b){
+  if(b==='logout')return logout();
+  if(b==='pw')return changePw();
+  if(b==='manage')return manageUsers();
+}
+async function changePw(){
+  const r=await formDlg('Change password',[{id:'old',label:'Current password',type:'password',req:1},{id:'n1',label:'New password',type:'password',req:1},{id:'n2',label:'Repeat new password',type:'password',req:1}]);
+  if(!r)return;
+  const us=getUsers(),u=us.find(x=>x.id===ME.id);
+  if(!u||(await hashPw(r.old,u.salt))!==u.hash)return alert('The current password is wrong.');
+  if(r.n1.length<4)return alert('Use at least 4 characters.');
+  if(r.n1!==r.n2)return alert('The new passwords do not match.');
+  u.salt=uid()+uid();u.hash=await hashPw(r.n1,u.salt);setUsers(us);msg('Password changed.');
+}
+function manageUsers(){
+  const draw=()=>{
+    $('#ulist').innerHTML=`<table class="tbl"><thead><tr><th>User ID</th><th>Name</th><th>Role</th><th></th></tr></thead><tbody>${getUsers().map(u=>`<tr><td>${esc(u.id)}</td><td>${esc(u.name)}</td><td><select data-ur="${esc(u.id)}">${['admin','editor','viewer'].map(r=>`<option ${r===u.role?'selected':''}>${r}</option>`).join('')}</select></td><td>${u.id===ME.id?'':`<button class="btn danger" type="button" data-ud="${esc(u.id)}">Delete</button>`}</td></tr>`).join('')}</tbody></table>`;
+  };
+  draw();$('#udlg').showModal();
+  $('#ulist').onchange=e=>{const s=e.target.closest('[data-ur]');if(!s)return;const us=getUsers(),u=us.find(x=>x.id===s.dataset.ur);
+    if(u.role==='admin'&&s.value!=='admin'&&us.filter(x=>x.role==='admin').length<2){alert('There must be at least one administrator.');draw();return;}
+    u.role=s.value;setUsers(us);if(u.id===ME.id)ME.role=u.role;};
+  $('#ulist').onclick=e=>{const d=e.target.closest('[data-ud]');if(!d)return;if(!confirm('Delete user '+d.dataset.ud+'?'))return;setUsers(getUsers().filter(x=>x.id!==d.dataset.ud));draw();};
+}
+$('#uadd').onclick=async()=>{
+  const r=await formDlg('Add user',[{id:'id',label:'User ID',req:1},{id:'name',label:'Display name'},{id:'pw',label:'Password (min. 4 characters)',type:'password',req:1},{id:'role',label:'Role',type:'select',value:'editor',options:[['admin','Administrator'],['editor','Editor'],['viewer','Viewer (read only)']]}]);
+  if(!r)return;
+  const us=getUsers();
+  if(us.some(u=>u.id.toLowerCase()===r.id.trim().toLowerCase()))return alert('That user ID already exists.');
+  if(r.pw.length<4)return alert('Use at least 4 characters.');
+  const salt=uid()+uid();us.push({id:r.id.trim(),name:r.name.trim()||r.id.trim(),role:r.role,salt,hash:await hashPw(r.pw,salt)});setUsers(us);
+  manageUsers();
+};
+
+/* ================= centre panel ================= */
+const B=(a,l,x,cls)=>`<button class="btn ${cls||''}" data-a="${a}" ${x||''}>${l}</button>`;
+const rr=(k,o,p)=>cref.push({k,o,p})-1;
+function tbl(cols,rows,empty){
+  if(!rows.length)return `<div class="empty">${empty}</div>`;
+  return `<table class="tbl"><thead><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table>`;
+}
+function gaOptions(cur){
+  return `<option value="">– none –</option>`+allGA().sort((a,b)=>a.ga.localeCompare(b.ga,undefined,{numeric:true})).map(g=>`<option value="${g.ga}" ${g.ga===cur?'selected':''}>${esc(g.ga+'  '+g.name)}</option>`).join('');
+}
+function welcome(){
+  return `<div class="welcome"><h2>BusSmith</h2><p class="mut">${mode==='catalog'?'Select a product in the catalog, or add your own product with + .':'Select an item in the tree on the left.'}</p></div>`;
+}
+function objTable(owner,showLinks,flt){
+  const objs=owner.objs;
+  if(!objs.length||(flt&&!objs.some(flt)))return '<div class="empty">No group objects yet. Use + Add › Group Object.</div>';
+  const th=['Number','Name','Object Function'].concat(showLinks?['Linked with','Other Linked']:[],['Length','C','R','W','T','U','Data Type','Priority','']);
+  const rows=objs.map((x,i)=>{
+    if(flt&&!flt(x))return '';
+    const a=(f)=>`data-oi="${i}" data-of="${f}"`;
+    return `<tr><td>${x.num}</td><td><input ${a('name')} value="${esc(x.name)}"></td><td><input ${a('func')} value="${esc(x.func)}"></td>`+
+      (showLinks?`<td><select ${a('ga')}>${gaOptions(x.ga)}</select></td><td><input ${a('links')} value="${esc(x.links.join(', '))}" placeholder="e.g. 1/0/2, 1/0/3"></td>`:'')+
+      `<td><select ${a('len')}>${LENS.map(l=>`<option ${l===x.len?'selected':''}>${l}</option>`).join('')}</select></td>`+
+      [...FLAGS].map(f=>`<td><input type="checkbox" ${a('flag')} data-fl="${f}" ${x.flags.includes(f)?'checked':''}></td>`).join('')+
+      `<td><select ${a('dpt')}><option value="">–</option>${DPT_LIST.map(([v,n])=>`<option value="${v}" ${x.dpt===v?'selected':''}>${v} ${n}</option>`).join('')}</select></td>`+
+      `<td><select ${a('prio')}>${PRIOS.map(p=>`<option ${p===x.prio?'selected':''}>${p}</option>`).join('')}</select></td><td>${B('delObj','&#10005;','data-i="'+i+'"')}</td></tr>`;
+  }).join('');
+  return `<div class="scroll"><table class="tbl objt"><thead><tr>${th.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+function paramTable(v){
+  if(!v.params.length)return '<div class="empty">No parameters. Import a product database (⋮ menu) to get the real parameters of a product, or use + Parameter to note settings by hand.</div>';
+  const grp=v.params.some(p=>p.channel||p.group);
+  return `<table class="tbl"><thead><tr>${grp?'<th>Channel / group</th>':''}<th>Parameter</th><th>Value</th><th></th></tr></thead><tbody>${v.params.map((p,i)=>`<tr>${grp?`<td class="mut">${esc([p.channel,p.group].filter(Boolean).join(' / '))}</td>`:''}${paramRow(p,i)}</tr>`).join('')}</tbody></table>`;
+}
+const paramRow=(p,i)=>`<td><input data-pi="${i}" data-pf="name" value="${esc(p.name)}"></td><td>${p.opts&&p.opts.length?`<select data-pi="${i}" data-pf="value">${p.opts.map(o=>`<option value="${esc(o[0])}" ${String(o[0])===String(p.value)?'selected':''}>${esc(o[1])}</option>`).join('')}</select>`:`<input data-pi="${i}" data-pf="value" value="${esc(p.value)}">`}</td><td>${B('delParam','&#10005;','data-i="'+i+'"')}</td>`;
+function channelsOf(v){
+  if(v.channels&&v.channels.length)return v.channels;
+  const r=[];[...v.params,...v.objs].forEach(x=>{if(x.channel&&!r.includes(x.channel))r.push(x.channel);});return r;
+}
+function ctlType(x){
+  if(x.ctl)return x.ctl;const d=String(x.dpt||'');
+  if(/^7\.600/.test(d))return 'tw';if(/^5\./.test(d))return 'dim';if(/^3\./.test(d))return 'rel';if(/^1\./.test(d))return 'sw';
+  return /1 bit/i.test(x.len||'')?'sw':/2 byte/i.test(x.len||'')?'tw':/1 byte/i.test(x.len||'')?'dim':'sw';
+}
+const ctlOver={};
+function ctlView(v){
+  const seen=new Map();
+  v.objs.forEach(x=>{
+    String([x.ga].concat(x.links||[]).join(' ')).split(/[ ,;]+/).filter(Boolean).forEach(g=>{
+      if(!seen.has(g))seen.set(g,{ga:g,objs:[],x});
+      seen.get(g).objs.push(x);
+    });
+  });
+  const list=[...seen.values()].sort((a,b)=>a.ga.localeCompare(b.ga,undefined,{numeric:true}));
+  const rows=list.map(r=>{
+    const g=gaByStr.get(r.ga),ga=r.ga,id=esc(ga.replace(/\//g,'_')),dpt=g&&g.dpt?g.dpt:r.x.dpt;
+    const t=ctlOver[ga]||ctlType({dpt,len:r.x.len});
+    const sel=`<select data-ctlt="${esc(ga)}">${[['sw','Switch'],['dim','Dimming %'],['tw','Colour temperature K'],['rel','Brighter / darker']].map(o=>`<option value="${o[0]}" ${o[0]===t?'selected':''}>${o[1]}</option>`).join('')}</select>`;
+    let c;
+    if(t==='sw')c=B('ctlw','On','data-ga="'+ga+'" data-v="1"')+B('ctlw','Off','data-ga="'+ga+'" data-v="0"');
+    else if(t==='rel')c=B('ctlw','Brighter','data-ga="'+ga+'" data-v="9"')+B('ctlw','Darker','data-ga="'+ga+'" data-v="1"')+B('ctlw','Stop','data-ga="'+ga+'" data-v="0"');
+    else if(t==='dim')c=`<span class="mut">0</span> <input type="range" min="0" max="100" step="1" value="100" data-ctlr="${esc(ga)}" style="width:220px"> <span class="mut">100</span> <b id="cv_${id}">100 %</b>`;
+    else c=`<span class="mut">2400 K</span> <input type="range" min="2400" max="6000" step="100" value="4000" data-ctlk="${esc(ga)}" style="width:220px"> <span class="mut">6000 K</span> <b id="cv_${id}">4000 K</b>`;
+    const nm=(g&&g.name?g.name:'')||r.objs.map(o=>o.name).filter(n=>n&&n!=='Object')[0]||'';
+    return `<tr><td class="mono">${esc(ga)}</td><td>${esc(nm)}</td><td>${esc(dpt?(DPT_NAME[dpt]||dpt):'')}</td><td>${r.objs.length>1?'<span class="mut">'+r.objs.length+' objects</span>':'<span class="mut">'+esc(r.objs[0].num)+'</span>'}</td><td>${sel}</td><td>${c}</td><td>${B('ctlr','Read','data-ga="'+ga+'"')}</td></tr>`;
+  });
+  return `<div class="card"><h4>Live control over the connected interface</h4>${rows.length?`<input id="ctlq" placeholder="Filter by address or name…" style="margin-bottom:6px;width:260px" oninput="const q=this.value.toLowerCase();document.querySelectorAll('#ctlbody tr').forEach(r=>r.style.display=r.innerText.toLowerCase().includes(q)?'':'none')"><table class="tbl"><thead><tr><th>Group address</th><th>Name</th><th>Data type</th><th>Objects</th><th>Control as</th><th>Send</th><th></th></tr></thead><tbody id="ctlbody">${rows.join('')}</tbody></table><div class="mut" style="margin-top:6px">Each group address is listed once. A lamp reacts to every address its objects are linked to, including shared "all lamps" addresses. Dimming sends 0–100 %; colour temperature sends 2400–6000 K (DPT 7.600).</div>`:'<div class="empty">No group object of this device is linked to a group address yet.</div>'}</div>`;
+}
+let chsel=0;
+function chanView(v){
+  const chs=channelsOf(v),gen=v.params.some(p=>!p.channel)||v.objs.some(o=>!o.channel);
+  const list=(gen?['']:[]).concat(chs);
+  if(chsel>=list.length||chsel<0)chsel=0;
+  const cur=list[chsel];
+  const cnt=n=>v.params.filter(p=>p.channel===n).length+' par · '+v.objs.filter(o=>o.channel===n).length+' obj';
+  const left=list.map((n,i)=>`<div class="chitem ${i===chsel?'on':''}" data-a="chsel" data-i="${i}"><span>${esc(n||'General')}</span><span class="mut">${cnt(n)}</span></div>`).join('');
+  const ps=v.params.map((p,i)=>({p,i})).filter(x=>x.p.channel===cur);
+  const blocks=[];ps.forEach(x=>{let b=blocks.find(k=>k.g===x.p.group);if(!b){b={g:x.p.group,l:[]};blocks.push(b);}b.l.push(x);});
+  const pHtml=blocks.length?blocks.map(b=>`<div class="card"><h4>${esc(b.g||'Parameters')}</h4><table class="tbl"><tbody>${b.l.map(x=>`<tr>${paramRow(x.p,x.i)}</tr>`).join('')}</tbody></table></div>`).join(''):'<div class="empty">No parameters in this channel.</div>';
+  const oHtml=v.objs.some(o=>o.channel===cur)?`<div class="card"><h4>Group objects of this channel</h4>${objTable(v,true,o=>o.channel===cur)}</div>`:'';
+  return `<div class="chsplit"><div class="chlist">${left}</div><div class="chbody">${pHtml}${oHtml}</div></div>`;
+}
+function sendTool(g,s){
+  const d=g.dpt||'';let h='<div class="card"><h4>Write to bus</h4><div class="row">';
+  if(d.startsWith('1.')){const lab={'001':['Off','On'],'002':['False','True'],'008':['Up','Down'],'009':['Open','Close']}[d.split('.')[1]]||['0','1'];h+=B('gw',lab[1],'data-v="s 1"','pri')+B('gw',lab[0],'data-v="s 0"');}
+  else if(d==='5.001')h+=`<input id="sv" type="number" min="0" max="100" value="50" style="width:90px"> %${B('gwv','Send','','pri')}`;
+  else if(d.startsWith('9.'))h+=`<input id="sv" type="number" step="0.1" value="20" style="width:90px">${B('gwv','Send','','pri')}`;
+  else if(d==='17.001')h+=`<input id="sv" type="number" min="1" max="64" value="1" style="width:90px">${B('gwv','Send scene','','pri')}`;
+  else h+=`<input id="sv" placeholder="hex bytes, e.g. 0A1B" size="20">${B('gwv','Send','','pri')}`;
+  h+=B('gr','Read value')+'</div><div class="mut" style="margin-top:6px">Needs the gateway connected and the firmware with group write/read support.</div></div>';
+  return h;
+}
+function pathText(o){const r=[];(function w(arr,pre){arr.forEach(n=>{if(n===o)r.push(...pre,n.name);else w(n.kids,[...pre,n.name]);});})(P.build,[]);return r;}
+function crumbsParts(){
+  const a=[PTITLE[mode]];if(!sel)return a;
+  const o=sel.o,k=sel.k;
+  if(k==='mid'){const m=P.mains.find(x=>x.mids.includes(o));if(m)a.push(m.name);a.push(o.name);}
+  else if(k==='ga'){const m=P.mains.find(x=>x.mids.some(d=>d.gas.includes(o)));const d=m&&m.mids.find(x=>x.gas.includes(o));if(m)a.push(m.name);if(d)a.push(d.name);a.push(o.name);}
+  else if(k==='line'){const ar=lineArea.get(o);if(ar)a.push(ar.name);a.push(o.name);}
+  else if(k==='dev'){const dl=devLine.get(o);if(dl)a.push(dl.a.name,dl.l.name);a.push((devMap.get(o)||'')+' '+o.name);}
+  else if(k==='bnode')a.push(...pathText(o));
+  else if(o&&o.name&&k!=='proj'&&k!=='garoot'&&k!=='toporoot'&&k!=='broot'&&k!=='devroot')a.push(o.name);
+  return a;
+}
+function reportData(id){
+  const gl=[...gaMap];
+  switch(id){
+  case 'summary':return {title:'Project Summary',cols:['Item','Count'],rows:[['Main groups',P.mains.length],['Middle groups',P.mains.reduce((n,m)=>n+m.mids.length,0)],['Group addresses',gaMap.size],['Areas',P.topo.areas.length],['Lines',P.topo.areas.reduce((n,a)=>n+a.lines.length,0)],['Devices',devMap.size],['Group objects',[...devMap.keys()].reduce((n,v)=>n+v.objs.length,0)],['Building parts',(function c(a){return a.reduce((n,x)=>n+1+c(x.kids),0);})(P.build)],['Catalog products',P.catalog.length]]};
+  case 'galist':return {title:'Group Address List',cols:['Address','Name','Data type','Description','Linked objects'],rows:gl.map(([g,s])=>[s,g.name,g.dpt?g.dpt+' '+(DPT_NAME[g.dpt]||''):'',g.desc,(linkMap.get(s)||[]).length])};
+  case 'devlist':return {title:'Device List',cols:['Address','Name','Description','Status','Serial number','Objects'],rows:[...devMap].map(([v,s])=>[s,v.name,v.desc,v.status,v.serial,v.objs.length])};
+  case 'links':{const r=[];devMap.forEach((s,v)=>v.objs.forEach(x=>{[x.ga,...x.links].filter(Boolean).forEach((g,i)=>r.push([s,v.name,x.name,i?'also':'main',g,(gaByStr.get(g)||{}).name||'']));}));return {title:'Group Address Links',cols:['Device','Device name','Object','Link','Group address','GA name'],rows:r};}
+  case 'topology':{const r=[];P.topo.areas.forEach(a=>a.lines.forEach(l=>{r.push([`${a.num}.${l.num}`,`${a.name} / ${l.name}`,l.devices.length,l.devices.map(v=>v.num+' '+v.name).join('; ')]);}));return {title:'Topology Overview',cols:['Line','Name','Devices','Device list'],rows:r};}
+  case 'unused':return {title:'Unused Group Addresses',cols:['Address','Name','Description'],rows:gl.filter(([g,s])=>!linkMap.has(s)).map(([g,s])=>[s,g.name,g.desc])};
+  }
+  return {title:'',cols:[],rows:[]};
+}
+let rpt=null;
+function monHTML(){
+  return `<div class="mbar"><input id="mfilter" placeholder="Filter (address, name, value)" size="26" value="${esc(mfilterVal)}">${B('mpause',paused?'Resume':'Pause')}${B('mclear','Clear')}${B('mexp','Export CSV')}<span id="mcount" class="mut"></span></div>
+  <div class="logwrap" id="logwrap"><table><thead><tr><th>Time</th><th>Dir</th><th>Source</th><th>Destination</th><th>Name</th><th>Type</th><th>Value</th><th>Raw</th><th></th></tr></thead><tbody id="log"></tbody></table></div>`;
+}
+function toolHTML(id){
+  if(id==='gm'||id==='bm')return monHTML();
+  if(id==='pa')return `<div class="card"><h4>Programming mode</h4><div class="row">${B('readpa','Find devices in programming mode')}<span class="mut">Press the programming button on a device first (LED lit).</span></div></div>
+    <div class="card"><h4>Program individual address</h4><div class="row"><input id="paaddr" placeholder="e.g. 1.1.5" size="12">${B('writepa','Program address','','pri')}<span class="mut">Only ONE device may be in programming mode.</span></div></div>
+    <div class="card"><h4>Scan a line</h4><div class="row">Area <input id="sa" type="number" min="0" max="15" value="1" style="width:60px"> Line <input id="sl" type="number" min="0" max="15" value="1" style="width:60px">${B('scan2','Scan','','pri')}${B('stopscan','Stop','','danger')}</div></div>
+    <div class="card"><h4>Messages</h4><div class="mono">${msgs.slice(-12).reverse().map(m=>`<div>${esc(m)}</div>`).join('')||'<span class="mut">None yet.</span>'}</div></div>`;
+  if(id==='gv')return `<div class="card"><h4>Group value tool</h4><div class="row"><label class="mut">Group address <input id="gvga" placeholder="e.g. 1/0/1" size="12"></label>
+    <label class="mut">Type <select id="gvmode"><option value="on">On</option><option value="off">Off</option><option value="pct">Percent</option><option value="temp">Temperature</option><option value="scene">Scene</option><option value="raw">Raw hex</option></select></label>
+    <label class="mut">Value <input id="gvv" size="12" placeholder="(for percent, temperature…)"></label></div><div class="row" style="margin-top:8px">${B('gvw','Write','','pri')}${B('gvr','Read')}</div>
+    <p class="mut">Needs the gateway firmware with group write/read support.</p></div>`;
+  if(id==='conn')return `<div class="card"><h4>Connection</h4><div class="kv"><div>Status</div><div>${esc($('#gstat').textContent)}</div><div>Interface</div><div>${usbOpenNow()?esc('USB: '+usb.name):wsOpen()?esc('ESP32 '+$('#gwip').value):'not connected'}</div></div>
+    <div class="row" style="margin-top:8px">${B('conndlg',isConnected()?'Change connection…':'Connect…','','pri')}</div>
+    <p class="mut">Use your KNX USB interface directly (close ETS first, only one program can use it), or an BusSmith ESP32 gateway.</p>
+    ${usbRaw.length?`<h4>Raw USB frames (last ${Math.min(usbRaw.length,25)})</h4><textarea readonly style="width:100%;height:140px;font:11px monospace">${esc(usbRaw.slice(-25).join('\n'))}</textarea>`:''}</div>`;
+  return '';
+}
+function renderCenter(){
+  cref=[];const c=$('#center');
+  if(!sel){c.innerHTML=welcome();return;}
+  const o=sel.o,k=sel.k;let h='';
+  const H=(t,a,kind)=>`<div class="ch"><div><div class="kind">${esc(kind||KIND[k])}</div><h2>${esc(t)}</h2></div><div class="acts">${a||''}</div></div>`;
+  const gaRow=(g)=>{const s=gaMap.get(g);return `<tr class="click" data-r="${rr('ga',g,gaParent.get(g))}"><td class="mono">${s}</td><td>${esc(g.name)}</td><td>${g.dpt?g.dpt+' '+esc(DPT_NAME[g.dpt]||''):''}</td><td>${esc(g.desc)}</td><td>${(linkMap.get(s)||[]).length}</td></tr>`;};
+  const devRow=(v)=>`<tr class="click" data-r="${rr('dev',v,devParent.get(v))}"><td class="mono">${devMap.get(v)}</td><td>${esc(v.name)}</td><td>${esc(v.desc)}</td><td>${esc(v.status)}</td><td>${esc(v.serial)}</td><td>${v.objs.length}</td></tr>`;
+  const devCols=['Address','Name','Description','Status','Serial number','Objects'];
+  switch(k){
+  case 'garoot':h=H('Main Groups  '+P.mains.length,B('addMain','+ Add Main Group'))+tbl(['Main Group','Name','Description','Pass Through'],P.mains.map(m=>`<tr class="click" data-r="${rr('main',m,P.mains)}"><td class="mono">${m.num}</td><td>${esc(m.name)}</td><td>${esc(m.desc)}</td><td>${m.pass}</td></tr>`),'No main groups yet.');break;
+  case 'gafolder':{const list=[...gaMap.keys()].filter(g=>o===S.fComments?(g.comments&&g.comments.length):!linkMap.has(gaMap.get(g)));h=H(`${list.length}  ${o.name}`,'','Search folder')+tbl(['Address','Name','Data type','Description','Links'],list.map(gaRow),'Nothing found.');break;}
+  case 'main':h=H(`${o.num}  ${o.name}`,B('addMid','+ Middle Group')+B('del','Delete','','danger'))+tbl(['Address','Name','Description','Group addresses'],o.mids.map(d=>`<tr class="click" data-r="${rr('mid',d,o.mids)}"><td class="mono">${o.num}/${d.num}</td><td>${esc(d.name)}</td><td>${esc(d.desc)}</td><td>${d.gas.length}</td></tr>`),'No middle groups yet.');break;
+  case 'mid':{const m=P.mains.find(x=>x.mids.includes(o));h=H(`${m.num}/${o.num}  ${o.name}`,B('addGA','+ Group Address')+B('del','Delete','','danger'))+tbl(['Address','Name','Data type','Description','Links'],o.gas.map(gaRow),'No group addresses yet.');break;}
+  case 'ga':{const s=gaMap.get(o),links=linkMap.get(s)||[];
+    h=H(`${s}  ${o.name}`,B('del','Delete','','danger'))+
+    `<div class="card"><h4>Last value on the bus</h4><span id="livev" class="mono">${live[s]?esc(live[s].value)+' <span class="mut">at '+live[s].time+'</span>':'– (nothing seen yet; connect the gateway)'}</span></div>`+sendTool(o,s)+
+    `<div class="card"><h4>Linked group objects</h4>${links.length?`<table class="tbl"><thead><tr><th>Device</th><th>Object</th><th>Flags</th></tr></thead><tbody>${links.map(l=>`<tr class="click" data-r="${rr('dev',l.dev,devParent.get(l.dev))}"><td class="mono">${devMap.get(l.dev)} ${esc(l.dev.name)}</td><td>${esc(l.obj.name)}</td><td class="mono">${esc(l.obj.flags)}</td></tr>`).join('')}</tbody></table>`:'<span class="mut">No device object uses this address yet. Link objects on a device.</span>'}</div>`;break;}
+  case 'toporoot':h=H('Areas  '+P.topo.areas.length,B('addArea','+ Add Area'))+tbl(['Area','Name','Lines'],P.topo.areas.map(a=>`<tr class="click" data-r="${rr('area',a,P.topo.areas)}"><td class="mono">${a.num}</td><td>${esc(a.name)}</td><td>${a.lines.length}</td></tr>`),'No areas yet.');break;
+  case 'area':h=H(`${o.num}  ${o.name}`,B('addLine','+ Line')+B('del','Delete','','danger'))+tbl(['Address','Name','Devices'],o.lines.map(l=>`<tr class="click" data-r="${rr('line',l,o.lines)}"><td class="mono">${o.num}.${l.num}</td><td>${esc(l.name)}</td><td>${l.devices.length}</td></tr>`),'No lines yet.');break;
+  case 'line':{const a=lineArea.get(o);h=H(`${a.num}.${o.num}  ${o.name}`,B('addDev','+ Device')+B('scan','Scan line','','pri')+B('del','Delete','','danger'))+tbl(devCols,o.devices.map(devRow),'No devices yet. Add one from the Catalog panel, or scan the line while connected.');break;}
+  case 'devroot':h=H('Devices  '+devMap.size,B('addDev','+ Add Device'))+tbl(devCols,[...devMap.keys()].map(devRow),'No devices yet.');break;
+  case 'dev':{
+    const s=devMap.get(o);
+    h=H(`${s}  ${o.name}`,(sel.from?B('unassign','Remove from this part','data-addr="'+s+'"'):'')+B('devinfo','Read device info','data-addr="'+s+'"')+B('devassoc','Read group links from device','data-addr="'+s+'"')+B('devrestart','Restart device','data-addr="'+s+'"')+B('progaddr','Program address','data-addr="'+s+'"')+B('del','Delete','','danger'))+
+      (devInfo[s]?`<div class="card"><h4>Device info (read from the bus)</h4>${devInfo[s].ok?`<div class="kv"><div>Mask version</div><div>${devInfo[s].mask!=null?'0x'+devInfo[s].mask.toString(16).padStart(4,'0')+' · '+esc(devInfo[s].maskName):'–'}</div><div>Serial number</div><div class="mono">${devInfo[s].serial||'–'}</div><div>Manufacturer ID</div><div>${devInfo[s].mfr!=null?'0x'+devInfo[s].mfr.toString(16).padStart(4,'0'):'–'}</div><div>Read at</div><div>${new Date(devInfo[s].time).toLocaleTimeString()}</div></div>`:'<div class="mut">The device answered the connection but sent no information.</div>'}</div>`:'')+
+      (()=>{const nch=channelsOf(o).length;let tab=devtab;if(tab==='ch'&&!nch)tab='obj';
+        const T=(k,l)=>`<button class="${tab===k?'on':''}" data-a="devtab" data-v="${k}">${l}</button>`;
+        return `<div class="subtabs">${nch?T('ch','Channels <i class="cb">'+nch+'</i>'):''}${T('obj','Group Objects <i class="cb">'+o.objs.length+'</i>')}${T('par','Parameters <i class="cb">'+o.params.length+'</i>')}${T('ctl','Control')}${T('dca','DCA')}</div>`+
+        (tab==='ch'?chanView(o):tab==='obj'?objTable(o,true)+`<div style="margin-top:8px">${B('addObj','+ Group Object')}</div>`:tab==='par'?(o.params.some(p=>p.channel||p.group)?parView(o):paramTable(o))+`<div style="margin-top:8px">${B('addParam','+ Parameter')}</div>`:tab==='ctl'?ctlView(o):(isDali(o)?dcaView(o):
+          `<div class="card"><h4>Device Configuration App (DCA)</h4>${dcaApps(o).length?`<p>The DCA for this device is installed: <b>${dcaApps(o).map(a=>esc(a.name+(a.ver&&a.ver!=='–'?' '+a.ver:''))).join(', ')}</b>. It is a Windows add-in that runs only inside ETS, so BusSmith cannot open it. Use it in ETS. Channels, group objects and parameters are available here.</p>`:o.dca?`<p>This product comes with a DCA (from <b>${esc(o.dca)}</b>). In ETS the DCA runs inside ETS's own host, and BusSmith cannot run it yet. Use ETS for the DCA wizard, for example DALI commissioning. Channels, group objects and parameters are all available here.</p>`:'<p class="mut">No DCA is stored for this product. Import its .etsapp file with ⋮ → Import product database to see whether it includes one.</p>'}</div>`));})();break;}
+  case 'broot':case 'troot':{const list=P.build.filter(n=>!!n.trade===(k==='troot'));h=H(o.name+'  '+list.length,B(k==='troot'?'addT':'addBRoot',k==='troot'?'+ Add Trade':'+ Add Building'))+tbl(['Name','Description','Devices'],list.map(n=>`<tr class="click" data-r="${rr('bnode',n,P.build)}"><td>${esc(n.name)}</td><td>${esc(n.desc)}</td><td>${n.devs.length}</td></tr>`),'Nothing here yet.');break;}
+  case 'bnode':{
+    const free=allDevs().filter(d=>!o.devs.includes(d.addr));
+    h=H((BT[o.btype]?BT[o.btype]+': ':'')+(o.name||'(unnamed)'),B('addFloor','+ Floor')+B('addRoom','+ Room')+B('addBoard','+ Dist. board')+B('addDev','+ New Device here')+B('del','Delete','','danger'))+
+      `<div class="card"><h4>Parts</h4>${tbl(['Type','Name','Devices'],o.kids.map(n=>`<tr class="click" data-r="${rr('bnode',n,o.kids)}"><td>${esc(BT[n.btype]||'Part')}</td><td>${esc(n.name)}</td><td>${n.devs.length}</td></tr>`),'Nothing inside yet. Use + Floor or + Room.')}</div>`+
+      `<div class="card"><h4>Devices placed here</h4>${tbl(['Address','Name',''],o.devs.map(a=>devByAddr.get(a)).filter(Boolean).map(v=>`<tr class="click" data-r="${rr('dev',v,devParent.get(v))}"><td class="mono">${devMap.get(v)}</td><td>${esc(v.name)}</td><td>${B('unassign','Remove','data-addr="'+devMap.get(v)+'"')}</td></tr>`),'No devices placed yet.')}
+      <div class="row" style="margin-top:8px"><select id="asg" ${free.length?'':'disabled'}>${free.map(d=>`<option value="${d.addr}">${esc(d.addr+'  '+d.name)}</option>`).join('')||'<option>no free devices</option>'}</select>${B('assign','Place device here','',free.length?'':'disabled')}</div></div>`;break;}
+  case 'proj':{
+    const nObj=[...devMap.keys()].reduce((n,v)=>n+v.objs.length,0);
+    h=H(P.name,'','Project')+`<div class="card"><h4>Statistics</h4><div class="kv"><div>Group addresses</div><div>${gaMap.size}</div><div>Devices</div><div>${devMap.size}</div><div>Group objects</div><div>${nObj}</div><div>Areas / lines</div><div>${P.topo.areas.length} / ${P.topo.areas.reduce((n,a)=>n+a.lines.length,0)}</div><div>Created</div><div>${fmt(P.cre)} ${esc(P.creBy)}</div><div>Last modified</div><div>${fmt(P.modified)} ${esc(P.modBy||'')}</div></div></div><div class="card"><h4>Notes</h4><div class="mut">Edit the project name, number, client and description in the Properties pane on the right.</div></div>`;break;}
+  case 'report':{const r=reportData(o.id);rpt=r;h=H(r.title,B('rexp','Export CSV')+B('rprint','Print'),'Report')+tbl(r.cols,r.rows.map(row=>`<tr>${row.map(x=>`<td>${esc(x)}</td>`).join('')}</tr>`),'Nothing to report.');break;}
+  case 'catmfr':{const list=P.catalog.filter(c=>(c.mfr||'Unknown')===o.name);h=H(o.name,B('addProd','+ Product'))+tbl(['Product','Order number','Objects'],list.map(c=>`<tr class="click" data-r="${rr('cat',c,P.catalog)}"><td>${esc(c.name)}</td><td>${esc(c.orderNo)}</td><td>${c.objs.length}</td></tr>`),'No products.');break;}
+  case 'cat':{
+    const lines=[];P.topo.areas.forEach(a=>a.lines.forEach(l=>lines.push({a,l})));
+    h=H(o.name,B('del','Delete','','danger'))+`<div class="card"><h4>Add to project</h4>${lines.length?`<div class="row"><select id="addline">${lines.map((x,i)=>`<option value="${i}">${x.a.num}.${x.l.num}  ${esc(x.a.name)} / ${esc(x.l.name)}</option>`).join('')}</select>${B('addToLine','Add device to this line','','pri')}</div>`:'<span class="mut">Create an area and a line in the Topology panel first.</span>'}</div>
+      <div class="card"><h4>Group object templates</h4>${objTable(o,false)}<div style="margin-top:8px">${B('addObj','+ Group Object')}</div></div>`;break;}
+  case 'dtool':h=H(o.name,'','Diagnostics')+toolHTML(o.id);break;
+  }
+  c.innerHTML=h;
+  if(k==='dtool'&&(o.id==='gm'||o.id==='bm'))renderLog();
+}
+$('#center').addEventListener('click',e=>{
+  const ad=e.target.closest('button[data-add]');if(ad){addUnknownGA(ad.dataset.add);return;}
+  const b=e.target.closest('[data-a]');if(b){act(b.dataset.a,b);return;}
+  const r=e.target.closest('[data-r]');
+  if(r&&!e.target.closest('input,select,button')){const c=cref[+r.dataset.r];if(sel)opened.add(sel.o);select(c.k,c.o,c.p);}
+});
+$('#center').addEventListener('input',e=>{if(e.target.id==='mfilter'){mfilterVal=e.target.value;renderLog();}});
+$('#center').addEventListener('change',e=>{
+  const t=e.target;
+  if(t.dataset.oi!=null&&sel&&(sel.k==='dev'||sel.k==='cat')){
+    if(!guard())return renderCenter();
+    const x=sel.o.objs[+t.dataset.oi],f=t.dataset.of;
+    if(f==='flag'){const set=new Set(x.flags.split(''));if(t.checked)set.add(t.dataset.fl);else set.delete(t.dataset.fl);x.flags=[...FLAGS].filter(c=>set.has(c)).join('');}
+    else if(f==='links'){const parts=t.value.split(/[,;\s]+/).filter(Boolean),bad=parts.filter(p=>!gaByStr.has(p));if(bad.length)alert('Not in the project: '+bad.join(', '));x.links=parts.filter(p=>gaByStr.has(p)&&p!==x.ga);}
+    else{x[f]=t.value;if(f==='ga'&&t.value&&!x.dpt){const g=gaByStr.get(t.value);if(g&&g.dpt)x.dpt=g.dpt;}}
+    touch(sel.o);commit('Edit group object');renderAll();return;
+  }
+  if(t.dataset.pi!=null&&sel&&sel.k==='dev'){if(!guard())return renderCenter();sel.o.params[+t.dataset.pi][t.dataset.pf]=t.value;touch(sel.o);commit('Edit parameter');return;}
+});
+
+/* ================= right pane ================= */
+let rmode='props',ptab='settings',findQ={q:'',r:'',scope:'both',cs:false},findRes=[];
+const RLIST=[['props','Properties'],['groups','Groups'],['find','Find and Replace'],['work','Workspaces'],['todo','Todo Items'],['pending','Pending Operations'],['undo','Undo History']];
+function rcount(id){return id==='todo'?P.todos.filter(t=>!t.done).length:id==='pending'?ops.filter(o=>o.status==='running').length:id==='undo'?hist.length-1:0;}
+function renderRight(){
+  $('#rlist').innerHTML=RLIST.map(([id,l])=>`<div class="rli ${rmode===id?'on':''}" data-rm="${id}">${l}${rcount(id)?`<span class="cnt">${rcount(id)}</span>`:''}</div>`).join('');
+  const hd=$('#rhead'),bd=$('#rbody');
+  hd.textContent=(RLIST.find(x=>x[0]===rmode)||[])[1];
+  if(rmode==='props'){
+    if(!sel){bd.innerHTML='<p class="mut" style="text-align:center;margin-top:40px">No details</p>';return;}
+    bd.innerHTML=`<div class="ptabs" style="margin:-10px -12px 8px"><button data-pt="settings" class="${ptab==='settings'?'on':''}">Settings</button><button data-pt="comments" class="${ptab==='comments'?'on':''}">Comments${sel.o.comments&&sel.o.comments.length?' ('+sel.o.comments.length+')':''}</button><button data-pt="info" class="${ptab==='info'?'on':''}">Information</button></div>`+
+      (ptab==='settings'?settingsHTML():ptab==='comments'?commentsHTML():infoHTML());
+  }else if(rmode==='groups')bd.innerHTML=groupsHTML();
+  else if(rmode==='find')bd.innerHTML=findHTML();
+  else if(rmode==='work')bd.innerHTML=workHTML();
+  else if(rmode==='todo')bd.innerHTML=todoHTML();
+  else if(rmode==='pending')bd.innerHTML=pendingHTML();
+  else bd.innerHTML=undoHTML();
+}
+$('#rlist').addEventListener('click',e=>{const r=e.target.closest('[data-rm]');if(r){rmode=r.dataset.rm;renderRight();}});
+function settingsHTML(){
+  const o=sel.o,k=sel.k,rng=RANGE[k],ro=!canEdit()?'disabled':'';
+  const fld=(l,f,x)=>`<label>${l}<input data-f="${f}" value="${esc(o[f])}" ${ro} ${x||''}></label>`;
+  let h='';
+  if(k==='ga')h+=`<label>Address<div class="ro mono">${gaMap.get(o)}</div></label>`;
+  if(k==='dev'){const dl=devLine.get(o);h+=`<label>Individual Address<div class="row"><span class="mono">${dl?dl.a.num+'.'+dl.l.num+'.':''}</span><input data-f="num" data-num="1" type="number" min="0" max="255" value="${o.num}" style="width:80px" ${ro}></div></label>`;}
+  else if(rng)h+=`<label>Number<input data-f="num" data-num="1" type="number" min="${rng[0]}" max="${rng[1]}" value="${o.num}" ${ro}></label>`;
+  if(['proj','garoot','toporoot','broot','troot','devroot','gafolder','dtool','report','catmfr'].includes(k)&&k!=='proj'){return `<p class="mut">${esc(o.name)}</p>`;}
+  h+=fld('Name','name');
+  if(k==='proj')h+=fld('Project number','number')+fld('Client','client');
+  h+=`<label>Description<textarea data-f="desc" rows="3" ${ro}>${esc(o.desc||'')}</textarea></label>`;
+  if(k==='ga')h+=`<label>Data type<select data-f="dpt" ${ro}><option value="">– not set –</option>${DPT_LIST.map(([v,n])=>`<option value="${v}" ${o.dpt===v?'selected':''}>${v}  ${n}</option>`).join('')}</select></label>`;
+  if(k==='main'||k==='mid')h+=`<label>Pass Through<select data-f="pass" ${ro}><option ${o.pass==='No'?'selected':''}>No</option><option ${o.pass==='Yes'?'selected':''}>Yes</option></select></label>`;
+  if(k==='dev')h+=fld('Serial number','serial')+`<label>Status<select data-f="status" ${ro}>${STATUS.map(s=>`<option ${o.status===s?'selected':''}>${s}</option>`).join('')}</select></label>`+fld('Last downloaded','dl');
+  if(k==='cat')h+=fld('Manufacturer','mfr')+fld('Order number','orderNo');
+  if(o.mod||k==='proj')h+=`<label>Last modified<div class="ro">${fmt(o.mod||P.modified)} ${esc(o.modBy||P.modBy||'')}</div></label>`;
+  return h;
+}
+function commentsHTML(){
+  const o=sel.o;if(!o.comments)return '<p class="mut">This item cannot have comments.</p>';
+  return (o.comments.length?o.comments.slice().reverse().map(c=>`<div class="cm">${esc(c.text)}<br><small>${esc(c.by)} · ${fmt(c.time)}</small></div>`).join(''):'<p class="mut">No comments yet.</p>')+
+    `<textarea id="cmtext" rows="3" style="width:100%" placeholder="Write a comment…"></textarea><div style="margin-top:6px">${B('addComment','Add comment','','pri')}</div>`;
+}
+function infoHTML(){
+  const o=sel.o,k=sel.k,r=[];
+  r.push(['Type',KIND[k]]);
+  if(k==='ga'){const s=gaMap.get(o);r.push(['Address',s],['Data type',o.dpt?o.dpt+' '+(DPT_NAME[o.dpt]||''):'–'],['Linked objects',(linkMap.get(s)||[]).length]);}
+  if(k==='dev'){const dl=devLine.get(o);r.push(['Individual address',devMap.get(o)],['Line',dl?dl.l.name:''],['Area',dl?dl.a.name:''],['Manufacturer',o.mfr||'–'],['Product',o.product||'–'],['Order number',o.orderNo||'–'],['Group objects',o.objs.length],['Linked objects',o.objs.filter(x=>x.ga||x.links.length).length],['Parameters',o.params.length]);}
+  if(k==='main')r.push(['Middle groups',o.mids.length],['Group addresses',o.mids.reduce((n,d)=>n+d.gas.length,0)]);
+  if(k==='mid')r.push(['Group addresses',o.gas.length]);
+  if(k==='area')r.push(['Lines',o.lines.length]);
+  if(k==='line')r.push(['Devices',o.devices.length]);
+  if(k==='bnode')r.push(['Sub-parts',o.kids.length],['Devices',o.devs.length],['Kind',o.trade?'Trade':(BT[o.btype]||'Building')]);
+  if(k==='cat')r.push(['Manufacturer',o.mfr||'–'],['Order number',o.orderNo||'–'],['Group objects',o.objs.length]);
+  if(o.cre)r.push(['Created',fmt(o.cre)]);
+  if(o.mod)r.push(['Last modified',fmt(o.mod)+' '+(o.modBy||'')]);
+  return `<div class="kv" style="margin-top:6px">${r.map(([a,b])=>`<div>${esc(a)}</div><div>${esc(b)}</div>`).join('')}</div>`;
+}
+function groupsHTML(){
+  if(!sel)return '<p class="mut">Select an item to see related items.</p>';
+  const o=sel.o,k=sel.k,L=[];
+  const item=(kk,oo,pp,txt)=>`<div class="li click" data-gk="${rr(kk,oo,pp)}">${esc(txt)}</div>`;
+  cref=cref||[];
+  if(k==='ga')(linkMap.get(gaMap.get(o))||[]).forEach(l=>L.push(item('dev',l.dev,devParent.get(l.dev),`${devMap.get(l.dev)}  ${l.dev.name} – ${l.obj.name}`)));
+  if(k==='dev'){const seen=new Set();o.objs.forEach(x=>[x.ga,...x.links].filter(Boolean).forEach(g=>{if(seen.has(g))return;seen.add(g);const gg=gaByStr.get(g);if(gg)L.push(item('ga',gg,gaParent.get(gg),`${g}  ${gg.name}`));}));}
+  if(k==='line')o.devices.forEach(v=>L.push(item('dev',v,o.devices,`${devMap.get(v)}  ${v.name}`)));
+  if(k==='mid')o.gas.forEach(g=>L.push(item('ga',g,o.gas,`${gaMap.get(g)}  ${g.name}`)));
+  if(k==='bnode')o.devs.map(a=>devByAddr.get(a)).filter(Boolean).forEach(v=>L.push(item('dev',v,devParent.get(v),`${devMap.get(v)}  ${v.name}`)));
+  return L.length?`<p class="mut">Related to “${esc(o.name)}”</p>`+L.join(''):'<p class="mut">No related items.</p>';
+}
+$('#rbody').addEventListener('click',e=>{
+  const g=e.target.closest('[data-gk]');if(g){const c=cref[+g.dataset.gk];if(c)select(c.k,c.o,c.p);return;}
+  const pt=e.target.closest('[data-pt]');if(pt){ptab=pt.dataset.pt;renderRight();return;}
+  const b=e.target.closest('[data-a]');if(b){act(b.dataset.a,b);return;}
+  const f=e.target.closest('[data-fr]');if(f){const r=findRes[+f.dataset.fr];if(r){const t=r.target;if(r.panel!==mode){mode=r.panel;}select(t.k,t.o,t.p);}return;}
+  const j=e.target.closest('[data-jump]');if(j){jump(+j.dataset.jump);}
+});
+$('#rbody').addEventListener('input',e=>{
+  const t=e.target;
+  if(t.id==='fq'){findQ.q=t.value;return;}if(t.id==='fr'){findQ.r=t.value;return;}
+  if(!sel||!t.dataset.f||t.dataset.num)return;
+  if(!guard()){renderRight();return;}
+  sel.o[t.dataset.f]=t.value;renderTree();renderCenter();renderStatus();renderTabs();renderCrumbs();
+});
+$('#rbody').addEventListener('change',e=>{
+  const t=e.target;
+  if(t.id==='fscope'){findQ.scope=t.value;return;}if(t.id==='fcs'){findQ.cs=t.checked;return;}
+  if(t.dataset.todo){const td=P.todos.find(x=>x.id===t.dataset.todo);if(td&&guard()){td.done=t.checked;commit('Todo');renderRight();}return;}
+  if(!sel||!t.dataset.f)return;
+  if(!guard()){renderAll();return;}
+  if(t.dataset.num){
+    const v=parseInt(t.value,10);
+    if(isNaN(v)||v<+t.min||v>+t.max){t.value=sel.o.num;return alert(`Enter a number from ${t.min} to ${t.max}.`);}
+    if(sel.p&&sel.p.some(x=>x!==sel.o&&x.num===v)){t.value=sel.o.num;return alert('That number is already used here.');}
+    renumber(()=>{sel.o.num=v;if(sel.p)sel.p.sort(byNum);});
+  }else sel.o[t.dataset.f]=t.value;
+  touch(sel.o);commit('Edit '+(t.dataset.f==='desc'?'description':t.dataset.f));renderAll();
+});
+function findHTML(){
+  return `<label>Find<input id="fq" value="${esc(findQ.q)}"></label><label>Replace with<input id="fr" value="${esc(findQ.r)}"></label>
+  <label>Look in<select id="fscope"><option value="both" ${findQ.scope==='both'?'selected':''}>Names and descriptions</option><option value="name" ${findQ.scope==='name'?'selected':''}>Names only</option><option value="desc" ${findQ.scope==='desc'?'selected':''}>Descriptions only</option></select></label>
+  <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="fcs" style="width:auto;margin:0" ${findQ.cs?'checked':''}> Match case</label>
+  <div class="row" style="margin:8px 0">${B('findGo','Find','','pri')}${B('replaceAll','Replace all')}</div>
+  <div class="mut">${findRes.length} match(es)</div>${findRes.slice(0,200).map((r,i)=>`<div class="li click" data-fr="${i}"><b>${esc(r.kind)}</b> ${esc(r.text)}</div>`).join('')}`;
+}
+function searchables(){
+  const L=[],add=(kind,o,k,p,panel,fields,extra)=>L.push({kind,o,fields,panel,target:{k,o:extra||o,p},});
+  P.mains.forEach(m=>{add('Main group',m,'main',P.mains,'ga',['name','desc']);m.mids.forEach(d=>{add('Middle group',d,'mid',m.mids,'ga',['name','desc']);d.gas.forEach(g=>add('Group address',g,'ga',d.gas,'ga',['name','desc']));});});
+  P.topo.areas.forEach(a=>{add('Area',a,'area',P.topo.areas,'topo',['name','desc']);a.lines.forEach(l=>{add('Line',l,'line',a.lines,'topo',['name','desc']);l.devices.forEach(v=>{add('Device',v,'dev',l.devices,'topo',['name','desc']);v.objs.forEach(x=>L.push({kind:'Object',o:x,fields:['name','func'],panel:'topo',target:{k:'dev',o:v,p:l.devices}}));});});});
+  const fb=(arr)=>arr.forEach(n=>{add('Building part',n,'bnode',arr,'build',['name','desc']);fb(n.kids);});fb(P.build);
+  P.catalog.forEach(c=>add('Catalog product',c,'cat',P.catalog,'catalog',['name','desc']));
+  return L;
+}
+function runFind(){
+  const q=findQ.q;findRes=[];if(!q)return;
+  const lc=findQ.cs?q:q.toLowerCase();
+  searchables().forEach(it=>{
+    const fields=it.fields.filter(f=>findQ.scope==='both'||(findQ.scope==='name'?(f==='name'||f==='func'):f==='desc'));
+    fields.forEach(f=>{const v=String(it.o[f]||'');if((findQ.cs?v:v.toLowerCase()).includes(lc))findRes.push({kind:it.kind,text:v,item:it,field:f,panel:it.panel,target:it.target});});
+  });
+}
+function workHTML(){
+  const list=getWs();
+  return `<div class="row">${B('wsSave','Save current layout…','','pri')}</div><p class="mut">A workspace remembers your open tabs, favourite panels and which side panels are visible.</p>`+
+    (list.length?list.map((w,i)=>`<div class="li"><b>${esc(w.name)}</b><div class="row" style="margin-top:3px">${B('wsApply','Open','data-i="'+i+'"')}${B('wsDel','Delete','data-i="'+i+'"','danger')}</div></div>`).join(''):'<p class="mut">No workspaces saved.</p>');
+}
+const wsKey=()=>'nlk.ws.'+(ME?ME.id:'');
+const getWs=()=>{try{return JSON.parse(localStorage.getItem(wsKey())||'[]');}catch(e){return [];}};
+function todoHTML(){
+  return `<div class="row"><input id="tdtext" placeholder="New to-do…" style="flex:1">${B('todoAdd','Add','','pri')}</div>`+
+    (P.todos.length?P.todos.map(t=>`<div class="li"><label style="display:flex;gap:6px;align-items:flex-start;margin:0;color:var(--tx)"><input type="checkbox" data-todo="${t.id}" ${t.done?'checked':''} style="width:auto;margin-top:3px"><span style="${t.done?'text-decoration:line-through;color:var(--mut)':''}">${esc(t.text)}<br><small class="mut">${esc(t.by)} · ${fmt(t.time)}</small></span></label>${B('todoDel','Delete','data-id="'+t.id+'"','danger')}</div>`).join(''):'<p class="mut">No to-do items.</p>');
+}
+function pendingHTML(){
+  return ops.length?ops.map(o=>`<div class="li"><b>${esc(o.title)}</b><br><small class="mut">${esc(o.status)} · ${fmt(o.time)}</small></div>`).join(''):'<p class="mut">No pending operations. Bus scans, address programming and group writes appear here.</p>';
+}
+function undoHTML(){
+  return `<div class="row" style="margin-bottom:6px">${B('undo1','Undo')}${B('redo1','Redo')}</div>`+hist.map((h,i)=>({h,i})).reverse().map(({h,i})=>`<div class="li click ${i===hi?'cur':''}" data-jump="${i}">${esc(h.label)}<br><small class="mut">${fmt(h.time)} ${esc(h.by||'')}</small></div>`).join('');
+}
+
+/* ================= actions ================= */
+function opStart(t){const o={id:uid(),title:t,status:'running',time:now()};ops.unshift(o);if(ops.length>60)ops.pop();if(rmode==='pending')renderRight();return o;}
+function opEnd(o,st){if(o){o.status=st;}if(rmode==='pending')renderRight();}
+let opScan=null,opPa=null;
+function act(a,el){
+  if(!a)return;
+  const NON=['devassoc','ctlw','ctlr','devinfo','devrestart','devtab','chsel','scan','scan2','stopscan','progaddr','gw','gwv','gr','gvw','gvr','readpa','writepa','mpause','mclear','mexp','rexp','rprint','findGo','wsApply','undo1','redo1'];
+  if(!NON.includes(a)&&!guard())return;
+  let mut=true,label=a;
+  switch(a){
+  case 'devtab':mut=false;devtab=el.dataset.v;renderCenter();return;
+  case 'chsel':mut=false;chsel=+el.dataset.i;renderCenter();return;
+  case 'addMain':mut=false;newNumbered('main');return;
+  case 'addMid':mut=false;newNumbered('mid');return;
+  case 'addGA':mut=false;newNumbered('ga');return;
+  case 'addArea':mut=false;newNumbered('area');return;
+  case 'addLine':mut=false;newNumbered('line');return;
+  case 'addDev':mut=false;newDevice();return;
+  case 'addObj':{const owner=sel.o;owner.objs.push({num:(owner.objs.reduce((m,x)=>Math.max(m,x.num),0))+1,name:'New object',func:'',len:'1 bit',flags:'CRWT',dpt:'',prio:'Low',ga:'',links:[]});touch(owner);label='Add group object';break;}
+  case 'delObj':sel.o.objs.splice(+el.dataset.i,1);touch(sel.o);label='Delete group object';break;
+  case 'addParam':sel.o.params.push({name:'Parameter',value:''});devtab='par';label='Add parameter';break;
+  case 'delParam':sel.o.params.splice(+el.dataset.i,1);label='Delete parameter';break;
+  case 'conndlg':mut=false;if(isConnected())disconnect();openConn();return;
+  case 'addB':mut=false;newBuilding('part');return;
+  case 'addFloor':case 'addRoom':case 'addBoard':case 'addCorridor':case 'addStair':case 'addCabinet':mut=false;newBuilding({addFloor:'floor',addRoom:'room',addBoard:'board',addCorridor:'corridor',addStair:'stairway',addCabinet:'cabinet'}[a]);return;
+  case 'addBRoot':mut=false;newBuilding('building');return;
+  case 'addT':mut=false;newBuilding('trade');return;
+  case 'addProd':mut=false;newProduct();return;
+  case 'impProd':mut=false;if(guard())$('#pfile').click();return;
+  case 'addToLine':{
+    const lines=[];P.topo.areas.forEach(a=>a.lines.forEach(l=>lines.push({a,l})));const t=lines[+$('#addline').value];if(!t)return;
+    const p=sel.o,dev={name:p.name,desc:'',comments:[],status:'Unknown',serial:'',dl:'',mfr:p.mfr,product:p.name,orderNo:p.orderNo,params:JSON.parse(JSON.stringify(p.params||[])),appId:p.appId||'',channels:(p.channels||[]).slice(),dca:p.dca||'',objs:JSON.parse(JSON.stringify(p.objs)).map((x,i)=>{x.ga='';x.links=[];x.num=i+1;return x;})};
+    const o=addTo(t.l.devices,255,dev,1);if(!o)return;
+    msg(`Added ${p.name} as ${t.a.num}.${t.l.num}.${o.num}`);label='Add device from catalog';break;}
+  case 'assign':{const v=$('#asg').value;if(v&&devByAddr.has(v)&&!sel.o.devs.includes(v))sel.o.devs.push(v);opened.add(sel.o);label='Place device';break;}
+  case 'unassign':{const node=sel.k==='bnode'?sel.o:sel.from;if(node)node.devs=node.devs.filter(x=>x!==el.dataset.addr);if(sel.k==='dev')sel=null;label='Remove device from part';break;}
+  case 'del':{
+    if(!sel||!sel.p)return;
+    if(!confirm(`Delete "${sel.o.name}"${sel.k==='ga'||sel.k==='dev'||sel.k==='cat'?'':' and everything inside it'}?`))return;
+    sel.p.splice(sel.p.indexOf(sel.o),1);sel=null;cleanup();label='Delete';break;}
+  case 'addComment':{const t=$('#cmtext');if(!t||!t.value.trim())return;sel.o.comments.push({text:t.value.trim(),by:ME.id,time:now()});label='Add comment';break;}
+  case 'todoNew':case 'todoAdd':{
+    let text=a==='todoAdd'?($('#tdtext')||{}).value:null;
+    if(a==='todoNew'){rmode='todo';renderRight();setTimeout(()=>{const i=$('#tdtext');if(i)i.focus();},0);return;}
+    if(!text||!text.trim())return;P.todos.push({id:uid(),text:text.trim(),done:false,by:ME.id,time:now()});label='Add to-do';break;}
+  case 'todoDel':P.todos=P.todos.filter(t=>t.id!==el.dataset.id);label='Delete to-do';break;
+  case 'findGo':mut=false;runFind();renderRight();return;
+  case 'replaceAll':{
+    runFind();if(!findQ.q||!findRes.length)return renderRight();
+    if(!confirm(`Replace ${findRes.length} match(es) of "${findQ.q}" with "${findQ.r}"?`))return;
+    const re=new RegExp(findQ.q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),findQ.cs?'g':'gi');
+    findRes.forEach(r=>{r.item.o[r.field]=String(r.item.o[r.field]||'').replace(re,()=>findQ.r);});
+    findRes=[];label='Find and replace';break;}
+  case 'wsSave':{mut=false;formDlg('Save workspace',[{id:'n',label:'Name',req:1}]).then(r=>{if(!r)return;saveTab();const l=getWs();l.push({name:r.n,fav:favs.slice(),tabs:tabs.map(t=>({panel:t.panel})),ti,left:!$('#ws').classList.contains('noleft'),right:!$('#ws').classList.contains('noright')});localStorage.setItem(wsKey(),JSON.stringify(l));renderRight();msg('Workspace saved.');});return;}
+  case 'wsApply':{mut=false;const w=getWs()[+el.dataset.i];if(!w)return;favs=w.fav.filter(x=>PTITLE[x]);saveFavs();tabs=w.tabs.map(t=>({id:uid(),panel:PTITLE[t.panel]?t.panel:'ga',sel:null,devtab:'obj'}));ti=Math.min(w.ti||0,tabs.length-1);$('#ws').classList.toggle('noleft',!w.left);$('#ws').classList.toggle('noright',!w.right);loadTab(ti);setPanel(tabs[ti].panel);return;}
+  case 'wsDel':{mut=false;const l=getWs();l.splice(+el.dataset.i,1);localStorage.setItem(wsKey(),JSON.stringify(l));renderRight();return;}
+  case 'undo1':jump(hi-1);return;
+  case 'redo1':jump(hi+1);return;
+  case 'scan':{mut=false;const l=sel.o,ar=lineArea.get(l);startScan(ar.num,l.num);return;}
+  case 'scan2':{mut=false;startScan(+$('#sa').value,+$('#sl').value);return;}
+  case 'stopscan':mut=false;if(sendCmd('stop'))msg('Stopping scan…');return;
+  case 'ctlw':{mut=false;sendCmd('gwrite '+el.dataset.ga+' s '+el.dataset.v);return;}
+  case 'ctlr':{mut=false;sendCmd('gread '+el.dataset.ga);return;}
+  case 'devinfo':{mut=false;const a=el.dataset.addr;
+    if(!usb)return alert('Reading device info needs the USB interface. Click Connect and choose it first.');
+    msg('Reading '+a+'…');
+    devInfoRead(a).then(r=>{devInfo[a]=r;const d=devByAddr.get(a);if(d&&r.serial&&d.serial!==r.serial){d.serial=r.serial;commit('Device info '+a);}msg(r.ok?'Read device info of '+a:a+' answered but gave no info.');renderAll();}).catch(e=>{msg(String(e.message||e));alert(e.message||e);});return;}
+  case 'devassoc':{mut=false;const a=el.dataset.addr;
+    if(!usb)return alert('Reading the device needs the USB interface. Click Connect and choose it first.');
+    msg('Reading group links of '+a+'… this takes a few seconds.');
+    devAssocRead(a).then(r=>{const d=devByAddr.get(a);let n=0;
+      if(d){d.objs.forEach(x=>{const m=r.assoc.filter(q=>q.obj===x.num).map(q=>q.ga);if(m.length){x.ga=m[0];x.links=m.slice(1);n++;}});commit('Read group links '+a);}
+      msg(`Read ${r.assoc.length} link(s) from ${a}; ${n} group object(s) updated.`);
+      alert('Group links read from the device:\n\n'+(r.assoc.length?r.assoc.map(q=>'Object '+q.obj+'  →  '+q.ga).join('\n'):'(none)')+'\n\nThe Group Objects and Control tabs now use these addresses.');
+      renderAll();}).catch(e=>{msg(String(e.message||e));alert(e.message||e);});return;}
+  case 'devrestart':{mut=false;const a=el.dataset.addr;
+    if(!usb)return alert('Restarting a device needs the USB interface. Click Connect and choose it first.');
+    if(!confirm('Restart device '+a+'? Its outputs may switch while it restarts.'))return;
+    devRestart(a).then(()=>msg('Restart sent to '+a)).catch(e=>{msg(String(e.message||e));alert(e.message||e);});return;}
+  case 'progaddr':{mut=false;pendingVerify=el.dataset.addr;paFound=[];if(!confirm(`Press the programming button on the device that should become ${pendingVerify} (red LED on), then press OK.`)){pendingVerify=null;return;}if(sendCmd('writepa '+pendingVerify)){opPa=opStart('Program address '+pendingVerify);msg('Address sent, verifying…');}return;}
+  case 'writepa':{mut=false;const v=($('#paaddr').value||'').trim();const m=v.match(/^(\d{1,2})\.(\d{1,2})\.(\d{1,3})$/);if(!m||+m[1]>15||+m[2]>15||+m[3]>255)return alert('Use the format area.line.device, for example 1.1.5');paFound=[];pendingVerify=v;if(sendCmd('writepa '+v)){opPa=opStart('Program address '+v);msg('Address sent, verifying…');}return;}
+  case 'readpa':{mut=false;paFound=[];pendingVerify=null;if(sendCmd('readpa')){opPa=opStart('Find devices in programming mode');msg('Listening for devices in programming mode (3 seconds)…');}return;}
+  case 'gw':{mut=false;sendGroup(`gwrite ${gaMap.get(sel.o)} ${el.dataset.v}`);return;}
+  case 'gwv':{mut=false;const g=sel.o,s=gaMap.get(g),tail=encodeVal(g.dpt,$('#sv').value);if(!tail)return alert('That value is not valid for this data type.');sendGroup(`gwrite ${s} ${tail}`);return;}
+  case 'gr':{mut=false;sendGroup(`gread ${gaMap.get(sel.o)}`);return;}
+  case 'gvw':{mut=false;const ga=$('#gvga').value.trim();if(!/^\d{1,2}\/\d\/\d{1,3}$/.test(ga))return alert('Enter a group address like 1/0/1');const m=$('#gvmode').value,v=$('#gvv').value;
+    let tail=m==='on'?'s 1':m==='off'?'s 0':m==='pct'?encodeVal('5.001',v):m==='temp'?encodeVal('9.001',v):m==='scene'?encodeVal('17.001',v):encodeVal('',v);
+    if(!tail)return alert('That value is not valid for this type.');sendGroup(`gwrite ${ga} ${tail}`);return;}
+  case 'gvr':{mut=false;const ga=$('#gvga').value.trim();if(!/^\d{1,2}\/\d\/\d{1,3}$/.test(ga))return alert('Enter a group address like 1/0/1');sendGroup(`gread ${ga}`);return;}
+  case 'mpause':mut=false;paused=!paused;renderCenter();return;
+  case 'mclear':mut=false;log=[];renderLog();return;
+  case 'mexp':mut=false;download('nlk_bus_log.csv','time,dir,source,destination,name,type,value,apci,raw\n'+log.map(t=>[t.time,t.dir,t.src,t.dst,csvq(t.name),t.type,csvq(t.value),t.apci,t.data].join(',')).join('\n')+'\n','text/csv');return;
+  case 'rexp':mut=false;if(rpt)download('nlk_report.csv',rpt.cols.map(csvq).join(',')+'\n'+rpt.rows.map(r=>r.map(csvq).join(',')).join('\n')+'\n','text/csv');return;
+  case 'rprint':mut=false;window.print();return;
+  default:return;
+  }
+  if(mut){commit(label);}
+  renderAll();
+}
+
+/* ================= creation dialogs ================= */
+async function newNumbered(kind){
+  if(!guard())return;
+  const C={
+    main:{title:'New main group',max:31,start:0,arr:()=>P.mains,panel:'ga',make:r=>({name:r.name,desc:r.desc,pass:'No',comments:[],mids:[]})},
+    mid:{title:'New middle group',max:7,start:0,need:'main',msg:'Select a main group first.',arr:()=>sel.o.mids,parent:()=>sel.o,make:r=>({name:r.name,desc:r.desc,pass:'No',comments:[],gas:[]})},
+    ga:{title:'New group address',max:255,start:0,need:'mid',msg:'Select a middle group first.',arr:()=>sel.o.gas,parent:()=>sel.o,dpt:true,make:r=>({name:r.name,desc:r.desc,dpt:r.dpt||'',comments:[]})},
+    area:{title:'New area',max:15,start:1,panel:'topo',arr:()=>P.topo.areas,make:r=>({name:r.name,desc:r.desc,comments:[],lines:[]})},
+    line:{title:'New line',max:15,start:1,need:'area',msg:'Select an area first.',arr:()=>sel.o.lines,parent:()=>sel.o,make:r=>({name:r.name,desc:r.desc,comments:[],devices:[]})}
+  }[kind];
+  if(C.need&&!(sel&&sel.k===C.need))return alert(C.msg);
+  const arr=C.arr(),n=nextNum(arr,C.max,C.start);
+  if(n<0)return alert('No free number left here.');
+  const fields=[{id:'num',label:`Number (${C.start} to ${C.max})`,type:'number',value:n,req:1},{id:'name',label:'Name',req:1},{id:'desc',label:'Description'}];
+  if(C.dpt)fields.push({id:'dpt',label:'Data type',type:'select',value:'',options:[['','– not set –'],...DPT_LIST.map(([v,x])=>[v,v+'  '+x])]});
+  const r=await formDlg(C.title,fields);if(!r)return;
+  const num=parseInt(r.num,10);
+  if(isNaN(num)||num<C.start||num>C.max)return alert(`The number must be from ${C.start} to ${C.max}.`);
+  if(arr.some(x=>x.num===num))return alert('That number is already used here.');
+  const o=C.make({name:r.name.trim(),desc:(r.desc||'').trim(),dpt:r.dpt});o.num=num;o.cre=now();
+  arr.push(o);arr.sort(byNum);
+  if(C.parent)opened.add(C.parent());if(C.panel)mode=C.panel;
+  commit(C.title);index();select(kind,o,arr);
+}
+async function newDevice(){
+  if(!guard())return;
+  const lines=[];P.topo.areas.forEach(a=>a.lines.forEach(l=>lines.push({a,l})));
+  let pre='';
+  if(sel&&sel.k==='line'){const i=lines.findIndex(x=>x.l===sel.o);if(i>=0)pre=String(i);}
+  else if(sel&&sel.k==='dev'){const dl=devLine.get(sel.o),i=dl?lines.findIndex(x=>x.l===dl.l):-1;if(i>=0)pre=String(i);}
+  if(!pre)pre=lines.length?'0':'new';
+  const lopts=lines.map((x,i)=>[String(i),`${x.a.num}.${x.l.num}  ${x.a.name} / ${x.l.name}`]);
+  lopts.push(['new',lines.length?'New line (created automatically)':'Create Area 1 / Line 1 automatically']);
+  const r=await formDlg('New device',[
+    {id:'name',label:'Name',req:1},
+    {id:'line',label:'Line',type:'select',value:pre,options:lopts},
+    {id:'num',label:'Device number on the line (leave empty for the next free one)',type:'number'},
+    {id:'prod',label:'Product',type:'select',value:'',options:[['','Empty device (no group objects)'],...P.catalog.map(c=>[c.id,c.name])]}]);
+  if(!r)return;
+  let t;
+  if(r.line==='new'){
+    let ar=P.topo.areas[0];
+    if(!ar){ar={num:1,name:'Area 1',desc:'',comments:[],lines:[],cre:now()};P.topo.areas.push(ar);}
+    const ln=nextNum(ar.lines,15,1);if(ln<0)return alert('No free line number in the first area.');
+    const li={num:ln,name:`Line ${ar.num}.${ln}`,desc:'',comments:[],devices:[],cre:now()};ar.lines.push(li);ar.lines.sort(byNum);
+    t={a:ar,l:li};
+  }else t=lines[+r.line];
+  const num=r.num===''?nextNum(t.l.devices,255,1):parseInt(r.num,10);
+  if(isNaN(num)||num<1||num>255)return alert('The device number must be from 1 to 255.');
+  if(t.l.devices.some(x=>x.num===num))return alert('That device number is already used on this line.');
+  const prod=P.catalog.find(c=>c.id===r.prod);
+  const dev={num,name:r.name.trim(),desc:'',comments:[],status:'Unknown',serial:'',dl:'',mfr:prod?prod.mfr:'',product:prod?prod.name:'',orderNo:prod?prod.orderNo:'',params:prod&&prod.params?JSON.parse(JSON.stringify(prod.params)):[],appId:prod?prod.appId||'':'',channels:prod&&prod.channels?prod.channels.slice():[],dca:prod?prod.dca||'':'',cre:now(),
+    objs:prod?JSON.parse(JSON.stringify(prod.objs)).map((x,i)=>{x.ga='';x.links=[];x.num=i+1;return x;}):[]};
+  t.l.devices.push(dev);t.l.devices.sort(byNum);
+  const from=sel&&sel.k==='bnode'?sel.o:null;
+  if(from){from.devs.push(`${t.a.num}.${t.l.num}.${num}`);opened.add(from);}
+  opened.add(t.a);opened.add(t.l);
+  commit('Add device');index();select('dev',dev,t.l.devices,from);
+  msg(`Added device ${t.a.num}.${t.l.num}.${num}`);
+}
+const BT={building:'Building',floor:'Floor',room:'Room',corridor:'Corridor',stairway:'Stairway',board:'Distribution board',cabinet:'Cabinet',part:'Building part',trade:'Trade'};
+async function newBuilding(type){
+  if(!guard())return;
+  const root=type==='building'||type==='trade';
+  if(!root&&!(sel&&sel.k==='bnode'))return alert('Select a building (or a floor) first, then add the floor or room to it.');
+  const t='New '+BT[type].toLowerCase();
+  const r=await formDlg(t,[{id:'name',label:'Name',req:1},{id:'desc',label:'Description'}]);if(!r)return;
+  const n={id:uid(),name:r.name.trim(),desc:(r.desc||'').trim(),btype:type,comments:[],kids:[],devs:[],cre:now()};
+  let arr=P.build;if(type==='trade')n.trade=true;
+  if(!root){arr=sel.o.kids;opened.add(sel.o);}
+  arr.push(n);mode='build';commit(t);index();select('bnode',n,arr);
+}
+async function newProduct(){
+  if(!guard())return;
+  const r=await formDlg('New catalog product',[{id:'name',label:'Product name',req:1},{id:'mfr',label:'Manufacturer',value:'Generic'},{id:'orderNo',label:'Order number'}]);if(!r)return;
+  const c={id:uid(),mfr:r.mfr.trim()||'Generic',name:r.name.trim(),orderNo:r.orderNo.trim(),desc:'',comments:[],objs:[],cre:now()};
+  P.catalog.push(c);mode='catalog';commit('New product');index();select('cat',c,P.catalog);
+}
+async function renameSel(){
+  if(!sel||!['main','mid','ga','area','line','dev','bnode','cat','proj'].includes(sel.k))return;
+  if(!guard())return;
+  const r=await formDlg('Rename',[{id:'name',label:'Name',value:sel.o.name,req:1},{id:'desc',label:'Description',value:sel.o.desc||''}]);
+  if(!r)return;
+  sel.o.name=r.name.trim();sel.o.desc=(r.desc||'').trim();touch(sel.o);commit('Rename');renderAll();
+}
+$('#bren').onclick=renameSel;
+
+/* ================= error bar ================= */
+function showErr(m){$('#errtxt').textContent='Something went wrong: '+m;$('#errbar').hidden=false;}
+window.addEventListener('error',e=>showErr(e.message));
+window.addEventListener('unhandledrejection',e=>showErr(String(e.reason&&e.reason.message||e.reason)));
+$('#errx').onclick=()=>{$('#errbar').hidden=true;};
+$('#errreset').onclick=()=>{if(confirm('Delete the project saved in this app and reload? (Users and settings are kept.)')){localStorage.removeItem(PKEY);location.reload();}};
+
+function select2(k,o,p){sel={k,o,p,from:null};navPush();}   // select without re-render; act() renders afterwards
+function startScan(a,l){
+  if(isNaN(a)||isNaN(l)||a<0||a>15||l<0||l>15)return alert('Area and line must be 0 to 15.');
+  scanCount=0;scanNew=0;
+  if(sendCmd(`scan ${a} ${l}`)){opScan=opStart(`Scan line ${a}.${l}`);msg(`Scanning line ${a}.${l}… this can take a minute or two.`);}
+}
+function sendGroup(c){if(sendCmd(c)){const o=opStart(c.startsWith('gread')?'Group read '+c.split(' ')[1]:'Group write '+c.split(' ')[1]);opEnd(o,'sent');}}
+
+/* ================= status ================= */
+function renderStatus(){
+  $('#sbsel').textContent=sel&&sel.o?(sel.k==='ga'?gaMap.get(sel.o)+'  ':sel.k==='dev'?devMap.get(sel.o)+'  ':'')+(sel.o.name||''):'';
+  $('#sbcount').textContent=`${gaMap.size} group addresses · ${devMap.size} devices`;
+  $('#sbuser').textContent=ME?ME.name+' ('+ME.role+')':'';
+}
+function renderCrumbs(){
+  const p=crumbsParts();
+  $('#crumbs').innerHTML=p.map((x,i)=>i===p.length-1?`<b>${esc(x)}</b>`:esc(x)).join(' &#8250; ');
+}
+function msg(t){const d=new Date();msgs.push(`${d.toLocaleTimeString([],{hour12:false})}  ${t}`);if(msgs.length>300)msgs.shift();$('#sbmsg').textContent=t;}
+function renderAll(){
+  index();
+  if(sel&&sel.o&&sel.o!==P&&sel.k!=='proj'&&!['garoot','toporoot','broot','troot','devroot','gafolder','report','dtool','catmfr'].includes(sel.k)){
+    // drop selections that no longer exist
+    const exists=(sel.k==='ga'&&gaMap.has(sel.o))||(sel.k==='dev'&&devMap.has(sel.o))||(['main','mid','area','line','bnode','cat'].includes(sel.k));
+    if(!exists)sel=null;
+  }
+  if(sel&&sel.k==='proj')sel.o=P;
+  renderTabs();renderLeftHead();renderTree();renderCenter();renderRight();renderStatus();renderCrumbs();
+  $('#bundo').disabled=hi<=0;$('#bdel').disabled=!(sel&&sel.p);
+  $('#nback').disabled=ni<=0;$('#nfwd').disabled=ni>=nav.length-1;
+}
+$('#bdel').onclick=()=>act('del');
+$('#bundo').onclick=()=>jump(hi-1);
+document.addEventListener('keydown',e=>{
+  if(!ME)return;
+  const inField=/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();fileAct('save');}
+  else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'&&!inField){e.preventDefault();jump(hi+(e.shiftKey?1:-1));}
+  else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='y'&&!inField){e.preventDefault();jump(hi+1);}
+  else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='f'){e.preventDefault();rmode='find';renderRight();setTimeout(()=>{const i=$('#fq');if(i)i.focus();},0);}
+  else if((e.ctrlKey||e.metaKey)&&e.key===','){e.preventDefault();openSettings();}
+  else if(e.key==='F2'&&!inField){e.preventDefault();renameSel();}
+  else if(e.key==='Delete'&&!inField&&sel&&sel.p){act('del');}
+});
+
+/* ================= Settings, ETS Apps and built-in apps ================= */
+const APPS_KEY='nlk.apps',BS_VER='1.0';
+const getApps=()=>{try{const a=JSON.parse(localStorage.getItem(APPS_KEY)||'[]');return Array.isArray(a)?a:[];}catch(e){return[];}};
+const setApps=a=>{try{localStorage.setItem(APPS_KEY,JSON.stringify(a));}catch(e){}};
+const BUILTIN=[
+  {id:'trace',name:'Project Tracing',desc:'Live bus monitor. Shows every telegram with the names from your project.'},
+  {id:'compare',name:'Device Compare',desc:'Compares two devices: parameters and group objects, with the differences highlighted.'},
+  {id:'labels',name:'Labels',desc:'Printable labels for devices: address, name, location and group addresses.'},
+  {id:'replace',name:'Replace Device',desc:'Swaps a device for another catalog product and keeps the group address links.'}];
+const appKey=s=>(s||'').replace(/-[0-9A-Fa-f]{4}$/,'');
+const dcaApps=d=>d&&d.appId?getApps().filter(a=>(a.programs||[]).some(p=>appKey(p)===appKey(d.appId))):[];
+const SPAGES=[['about','About'],['apps','ETS Apps'],['conn','Connection Manager'],['data','Data Storage'],['trouble','Troubleshooting'],['keys','Shortcuts']];
+let spage='apps',sapp='';
+const SB=(a,l,x,extra)=>`<button type="button" class="btn ${x||''}" data-sa="${a}" ${extra||''}>${l}</button>`;
+
+function settingsPage(k){
+  if(k==='about')return `<h3>About BusSmith</h3><div class="kv"><div>Version</div><div>${BS_VER}</div><div>Project</div><div>${esc(P.name)}</div><div>User</div><div>${esc(ME.name)} (${esc(ME.id)})</div></div><p class="mut">BusSmith: an unofficial, ETS-style engineering and diagnostics tool for KNX. Not affiliated with the KNX Association or any device manufacturer.</p>`;
+  if(k==='apps'){
+    const rows=[...BUILTIN.map(a=>({id:a.id,name:a.name,vendor:'BusSmith',ver:BS_VER,built:true,desc:a.desc})),...getApps().map(a=>({id:a.id,name:a.name,vendor:a.vendor||'–',ver:a.ver||'–',built:false,a}))];
+    if(!rows.some(r=>r.id===sapp))sapp=rows[0].id;
+    const cur=rows.find(r=>r.id===sapp);
+    const table=`<table class="tbl"><thead><tr><th>Name</th><th>Vendor</th><th>Version</th><th>Status</th></tr></thead><tbody>${rows.map(r=>`<tr class="arow ${r.id===sapp?'on':''}" data-sapp="${esc(r.id)}"><td>${esc(r.name)}</td><td>${esc(r.vendor)}</td><td>${esc(r.ver)}</td><td>${r.built?'<span class="okd">&#10003; built in</span>':'<span class="wrn" title="ETS add-in: runs only inside ETS">&#9888; add-in</span>'}</td></tr>`).join('')}</tbody></table>`;
+    const detail=cur.built?`<div class="card"><h4>${esc(cur.name)}</h4><p>${esc(cur.desc)}</p>${SB('open','Open','pri')}</div>`
+      :`<div class="card"><h4>${esc(cur.name)}</h4><p>ETS add-in from <b>${esc(cur.a.file)}</b>. It works with the application program(s): <span class="mono">${esc((cur.a.programs||[]).join(', ')||'–')}</span>.</p><p class="mut">This is a Windows program that runs only inside ETS. BusSmith lists it and shows on a device's DCA tab that the DCA exists. It cannot start it.</p>${SB('remove','Remove','danger')}</div>`;
+    return `<div class="appsgrid"><div class="appl">${table}${detail}</div><div class="appr">${SB('install','+ Install App…')}${SB('update','Check For Updates')}<p class="mut">Built-in apps are part of BusSmith. Install App registers an <b>.etsapp</b> file so BusSmith knows which devices have a DCA.</p></div></div>`;
+  }
+  if(k==='conn'){
+    const st=$('#gstat').textContent,gws=getGws(),rem=localStorage.getItem('nlk.conn')||'';
+    return `<h3>Connection Manager</h3><div class="kv"><div>Status</div><div>${esc(st)}</div><div>Remembered connection</div><div>${esc(rem||'none')}</div></div>
+      <div class="row" style="margin:10px 0">${SB('selconn','Select connection…','pri')}${isConnected()?SB('disc','Disconnect'):''}${rem?SB('forget','Forget remembered'):''}</div>
+      <h4>Configured ESP32 gateways</h4>${gws.length?`<table class="tbl"><tbody>${gws.map((ip,i)=>`<tr><td>${esc(ip)}</td><td>${SB('gwdel','Remove','','data-i="'+i+'"')}</td></tr>`).join('')}</tbody></table>`:'<p class="mut">None.</p>'}`;
+  }
+  if(k==='data'){
+    const size=(JSON.stringify(P).length/1024).toFixed(0);
+    return `<h3>Data Storage</h3><div class="kv"><div>Project</div><div>${esc(P.name)}</div><div>Project size</div><div>${size} KB</div><div>Devices</div><div>${devMap.size}</div><div>Group addresses</div><div>${gaMap.size}</div><div>Catalog products</div><div>${P.catalog.length}</div><div>Undo steps kept</div><div>${hist.length}</div></div>
+      <p class="mut">The project is stored inside this app on this computer. Use Save to keep a backup file.</p><div class="row">${SB('save','Save project to file','pri')}${SB('reset','Reset saved project…','danger')}</div>`;
+  }
+  if(k==='trouble'){
+    return `<h3>Troubleshooting</h3><div class="row">${SB('usbtest','Run USB self-test','pri')}${SB('trrefresh','Refresh')}</div><p class="mut">The self-test asks the USB interface which protocol it supports and whether the bus is connected. Press a KNX wall switch, then Refresh, and the frames appear below (TX = sent by BusSmith, RX = received).</p><h4>Recent messages</h4><textarea readonly style="width:100%;height:150px;font:12px monospace">${esc(msgs.slice(-80).join('\n'))}</textarea>
+      <h4>Raw USB frames (last 70)</h4><textarea readonly style="width:100%;height:240px;font:11px monospace">${esc(usbRaw.slice(-70).join('\n')||'No USB traffic yet.')}</textarea>`;
+  }
+  if(k==='keys'){
+    const K=[['Ctrl+S','Save project to file'],['Ctrl+Z / Ctrl+Y','Undo / redo'],['Ctrl+F','Find and replace'],['F2','Rename the selected item'],['Delete','Delete the selected item'],['Enter','Confirm a dialog'],['Ctrl+,','Open Settings']];
+    return `<h3>Shortcuts</h3><table class="tbl"><tbody>${K.map(([a,b])=>`<tr><td class="mono">${a}</td><td>${b}</td></tr>`).join('')}</tbody></table>`;
+  }
+  return '';
+}
+function renderSettings(){
+  $('#snav').innerHTML=SPAGES.map(([k,l])=>`<div class="snav ${k===spage?'on':''}" data-sp="${k}">${l}</div>`).join('');
+  $('#spage').innerHTML=settingsPage(spage);
+}
+function openSettings(p){spage=p||spage;renderSettings();const d=$('#sdlg');if(!d.open)d.showModal();}
+$('#bset').onclick=()=>openSettings('apps');
+$('#sdlg').addEventListener('click',e=>{
+  const n=e.target.closest('[data-sp]');if(n){spage=n.dataset.sp;renderSettings();return;}
+  const r=e.target.closest('[data-sapp]');if(r){sapp=r.dataset.sapp;renderSettings();return;}
+  const b=e.target.closest('[data-sa]');if(!b)return;
+  const a=b.dataset.sa;
+  if(a==='open'){const id=sapp;$('#sdlg').close();openApp(id);}
+  else if(a==='install')$('#afile').click();
+  else if(a==='update')alert('BusSmith has no online app store. Apps are installed from .etsapp files with Install App.\n\nBusSmith version: '+BS_VER);
+  else if(a==='remove'){if(confirm('Remove this app from BusSmith?')){setApps(getApps().filter(x=>x.id!==sapp));sapp='';renderSettings();}}
+  else if(a==='selconn'){$('#sdlg').close();if(isConnected())disconnect();openConn();}
+  else if(a==='disc'){disconnect();renderSettings();}
+  else if(a==='gwdel'){const g=getGws();g.splice(+b.dataset.i,1);setGws(g);renderSettings();}
+  else if(a==='forget'){try{localStorage.removeItem('nlk.conn');}catch(x){}renderSettings();}
+  else if(a==='save')fileAct('save');
+  else if(a==='usbtest')usbSelfTest();
+  else if(a==='trrefresh')renderSettings();
+  else if(a==='reset')$('#errreset').click();
+});
+$('#afile').onchange=async e=>{
+  const f=e.target.files[0];e.target.value='';if(!f)return;
+  try{
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');
+    let z;try{z=await JSZip.loadAsync(f);}catch(x){throw 'This file is not an ETS app (.etsapp).';}
+    const mn=Object.keys(z.files).find(n=>/(^|\/)AddInManifest\.xml$/i.test(n));
+    if(!mn)throw 'This is not an ETS app: AddInManifest.xml is missing.';
+    const d=new DOMParser().parseFromString((await z.files[mn].async('string')).replace(/^﻿/,''),'application/xml');
+    const root=d.querySelector('Knxapp');if(!root)throw 'The app manifest could not be read.';
+    const dn=[...d.querySelectorAll('DisplayName')],pick=dn.find(x=>/^en/i.test(x.getAttribute('LanguageId')||''))||dn[0];
+    const name=(pick&&pick.getAttribute('Name'))||f.name.replace(/\.etsapp$/i,'');
+    const programs=[...d.querySelectorAll('DeviceConfiguration ApplicationProgram')].map(x=>x.getAttribute('Id')).filter(Boolean);
+    const rel=(f.name.match(/R(\d+)/i)||[])[1];
+    const rec={id:'app:'+f.name,name,vendor:'–',ver:rel?'R'+rel:'–',file:f.name,appId:root.getAttribute('AppId')||'',programs,installed:now()};
+    const apps=getApps().filter(a=>a.id!==rec.id);apps.push(rec);setApps(apps);
+    msg('Installed app '+name+(rec.ver!=='–'?' '+rec.ver:''));
+    sapp=rec.id;spage='apps';openSettings('apps');
+  }catch(err){alert('Install failed: '+(err&&err.message?err.message:err));}
+};
+
+async function usbSelfTest(){
+  if(!usbOpenNow())return alert('Connect the USB interface first (Connect button in the toolbar).');
+  usbRaw.push('--- self-test: Device Feature Get 1..5 (supported EMI, descriptor, bus status, manufacturer, active EMI) ---');
+  hidInfo(usb.dev).forEach(l=>usbRaw.push(l));
+  for(const f of [1,2,3,4,5]){await usbSend([f,0x00],0x0F,0x01);await new Promise(r=>setTimeout(r,200));}
+  setTimeout(()=>{if($('#sdlg').open&&spage==='trouble')renderSettings();},500);
+}
+
+/* ---- generic app dialog ---- */
+let adGo=null;
+function appDlg(title,body,go,goLabel){
+  $('#adt').textContent=title;$('#adbody').innerHTML=body;
+  const b=$('#adgo');b.style.display=go?'':'none';b.textContent=goLabel||'Run';adGo=go;
+  const d=$('#adlg');if(!d.open)d.showModal();
+}
+$('#adgo').onclick=()=>{if(adGo)adGo();};
+function openApp(id){
+  if(id==='trace'){setPanel('diag');sel={k:'dtool',o:DT.bm,p:null,from:null};renderAll();return;}
+  if(id==='compare')return compareApp();
+  if(id==='labels')return labelsApp();
+  if(id==='replace')return replaceApp();
+}
+const devOpts=cur=>allDevs().sort((a,b)=>a.addr.localeCompare(b.addr,undefined,{numeric:true})).map(d=>`<option value="${d.addr}" ${d.addr===cur?'selected':''}>${esc(d.addr+'  '+d.name)}</option>`).join('');
+const optLabel=p=>{if(p.opts){const o=p.opts.find(o=>String(o[0])===String(p.value));if(o)return o[1];}return p.value===''||p.value==null?'(empty)':String(p.value);};
+const selDevAddr=()=>sel&&sel.k==='dev'&&devMap.get(sel.o)?devMap.get(sel.o):(allDevs()[0]||{}).addr;
+
+/* ---- Device Compare ---- */
+function compareApp(){
+  const ds=allDevs();if(ds.length<2)return alert('Add at least two devices first.');
+  const cur=selDevAddr(),other=(ds.find(d=>d.addr!==cur)||ds[1]).addr;
+  appDlg('Device Compare',`<div class="row"><label class="mut">Device A <select id="cmpA">${devOpts(cur)}</select></label><label class="mut">Device B <select id="cmpB">${devOpts(other)}</select></label><label class="mut"><input type="checkbox" id="cmpD" checked style="display:inline;width:auto"> Only differences</label></div><div id="cmpOut"></div>`,null);
+  const run=()=>{
+    const A=$('#cmpA').value,Bv=$('#cmpB').value,a=devByAddr.get(A),b=devByAddr.get(Bv);if(!a||!b)return;
+    const rows=[],add=(sec,k,x,y)=>rows.push({sec,k,x,y,d:x!==y});
+    add('General','Product',a.product||'–',b.product||'–');add('General','Manufacturer',a.mfr||'–',b.mfr||'–');add('General','Order number',a.orderNo||'–',b.orderNo||'–');
+    const pk=p=>[p.channel,p.group,p.name].filter(Boolean).join(' / ');
+    const pa=new Map(a.params.map(p=>[pk(p),optLabel(p)])),pb=new Map(b.params.map(p=>[pk(p),optLabel(p)]));
+    [...new Set([...pa.keys(),...pb.keys()])].forEach(k=>add('Parameters',k,pa.has(k)?pa.get(k):'—',pb.has(k)?pb.get(k):'—'));
+    const od=o=>`${o.flags} · ${o.len} · ${o.dpt||'no type'} · ${o.ga||'not linked'}`;
+    const oa=new Map(a.objs.map(o=>[o.num+'  '+o.name,od(o)])),ob=new Map(b.objs.map(o=>[o.num+'  '+o.name,od(o)]));
+    [...new Set([...oa.keys(),...ob.keys()])].forEach(k=>add('Group objects',k,oa.has(k)?oa.get(k):'—',ob.has(k)?ob.get(k):'—'));
+    const only=$('#cmpD').checked,diffs=rows.filter(r=>r.d).length;
+    let h='',last='';
+    rows.filter(r=>!only||r.d).forEach(r=>{if(r.sec!==last){h+=`<tr class="sec"><td colspan="3">${r.sec}</td></tr>`;last=r.sec;}h+=`<tr class="${r.d?'cdiff':''}"><td>${esc(r.k)}</td><td>${esc(r.x)}</td><td>${esc(r.y)}</td></tr>`;});
+    $('#cmpOut').innerHTML=`<p>${diffs} difference(s) in ${rows.length} compared items.</p><div class="scroll"><table class="tbl"><thead><tr><th>Item</th><th>${esc(A+'  '+a.name)}</th><th>${esc(Bv+'  '+b.name)}</th></tr></thead><tbody>${h||'<tr><td colspan="3" class="mut">No differences.</td></tr>'}</tbody></table></div>`;
+  };
+  ['cmpA','cmpB','cmpD'].forEach(i=>$('#'+i).onchange=run);run();
+}
+
+/* ---- Labels ---- */
+const LBLCSS='.sheet{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;font-family:Segoe UI,Arial,sans-serif}.lbl{border:1px solid #333;padding:6px 8px;border-radius:3px;break-inside:avoid;min-height:60px;color:#000;background:#fff}.la{font-weight:700;font-size:15px}.ln{font-size:13px}.lp{font-size:11px;color:#444}.lg{font-size:10px;color:#222;margin-top:3px;word-break:break-word}';
+const devsOfNode=n=>{const r=[...n.devs];n.kids.forEach(k=>r.push(...devsOfNode(k)));return r;};
+function locOf(addr){let r='';(function w(arr,pre){arr.forEach(n=>{if(!r&&n.devs.includes(addr))r=[...pre,n.name].join(' / ');if(!r)w(n.kids,[...pre,n.name]);});})(P.build,[]);return r;}
+let lastLabels='';
+function labelsApp(){
+  const scopes=[['all','All devices']];
+  P.topo.areas.forEach(a=>a.lines.forEach(l=>scopes.push(['line:'+a.num+'.'+l.num,`Line ${a.num}.${l.num}  ${l.name}`])));
+  (function w(arr,pre){arr.forEach(n=>{scopes.push(['node:'+n.id,'Place: '+[...pre,n.name].join(' / ')]);w(n.kids,[...pre,n.name]);});})(P.build,[]);
+  const pre=sel&&sel.k==='bnode'?'node:'+sel.o.id:'all';
+  appDlg('Labels',`<div class="row"><label class="mut">Devices <select id="lbS">${scopes.map(([v,l])=>`<option value="${esc(v)}" ${v===pre?'selected':''}>${esc(l)}</option>`).join('')}</select></label><label class="mut"><input type="checkbox" id="lbG" checked style="display:inline;width:auto"> Show group addresses</label></div><div id="lbOut"></div>`,()=>printLabels(),'Print');
+  const run=()=>{
+    const v=$('#lbS').value;let list=allDevs().sort((a,b)=>a.addr.localeCompare(b.addr,undefined,{numeric:true}));
+    if(v.startsWith('line:'))list=list.filter(d=>d.addr.startsWith(v.slice(5)+'.'));
+    else if(v.startsWith('node:')){let node=null;(function f(arr){arr.forEach(n=>{if(n.id===v.slice(5))node=n;f(n.kids);});})(P.build);const set=new Set(node?devsOfNode(node):[]);list=list.filter(d=>set.has(d.addr));}
+    const withGA=$('#lbG').checked;
+    lastLabels=list.map(d=>{
+      const loc=locOf(d.addr),gas=[...new Set(d.dev.objs.flatMap(o=>[o.ga,...(o.links||[])]).filter(Boolean))].join('   ');
+      return `<div class="lbl"><div class="la">${esc(d.addr)}</div><div class="ln">${esc(d.name)}</div>${d.dev.product?`<div class="lp">${esc(d.dev.product)}</div>`:''}${loc?`<div class="lp">${esc(loc)}</div>`:''}${withGA&&gas?`<div class="lg">${esc(gas)}</div>`:''}</div>`;
+    }).join('');
+    $('#lbOut').innerHTML=`<style>${LBLCSS}</style><p class="mut">${list.length} label(s)</p><div class="sheet">${lastLabels||'<p class="mut">No devices.</p>'}</div>`;
+  };
+  $('#lbS').onchange=run;$('#lbG').onchange=run;run();
+}
+function printLabels(){
+  if(!lastLabels)return alert('There are no labels to print.');
+  const f=document.createElement('iframe');f.style.cssText='position:fixed;right:0;bottom:0;width:0;height:0;border:0';document.body.appendChild(f);
+  const w=f.contentWindow;w.document.open();w.document.write(`<!doctype html><meta charset="utf-8"><title>BusSmith labels</title><style>${LBLCSS}</style><div class="sheet">${lastLabels}</div>`);w.document.close();
+  setTimeout(()=>{w.focus();w.print();setTimeout(()=>f.remove(),3000);},300);
+}
+
+/* ---- Replace Device ---- */
+function replaceApp(){
+  if(!guard())return;
+  const ds=allDevs();if(!ds.length)return alert('Add a device first.');
+  if(!P.catalog.length)return alert('The catalog is empty. Import a product database first.');
+  appDlg('Replace Device',`<div class="row"><label class="mut">Device to replace <select id="rpD">${devOpts(selDevAddr())}</select></label><label class="mut">New product <select id="rpP">${P.catalog.map(c=>`<option value="${c.id}">${esc(c.name+' ('+(c.mfr||'?')+')')}</option>`).join('')}</select></label></div><p id="rpInfo"></p>`,doReplace,'Replace');
+  const linked=o=>!!(o.ga||(o.links&&o.links.length));
+  const info=()=>{
+    const d=devByAddr.get($('#rpD').value),c=P.catalog.find(x=>x.id===$('#rpP').value);if(!d||!c)return;
+    const n=d.objs.filter(linked).length,keep=d.objs.filter(o=>linked(o)&&c.objs.some(x=>x.num===o.num)).length;
+    $('#rpInfo').textContent=`${d.name} (${$('#rpD').value}) has ${n} linked object(s). ${keep} of them also exist in the new product and keep their group addresses; the other ${n-keep} lose their links. Parameters are reset to the new product's defaults. Address, name and place stay the same.`;
+  };
+  $('#rpD').onchange=info;$('#rpP').onchange=info;info();
+}
+function doReplace(){
+  const addr=$('#rpD').value,d=devByAddr.get(addr),c=P.catalog.find(x=>x.id===$('#rpP').value);if(!d||!c)return;
+  if(!confirm(`Replace the product of ${addr} ${d.name} with "${c.name}"?\n(You can undo this.)`))return;
+  const old=d.objs,nobjs=JSON.parse(JSON.stringify(c.objs)).map(x=>{x.ga='';x.links=[];return x;});
+  let kept=0;
+  nobjs.forEach(x=>{const o=old.find(y=>y.num===x.num);if(o&&(o.ga||(o.links&&o.links.length))){x.ga=o.ga||'';x.links=(o.links||[]).slice();kept++;}});
+  d.objs=nobjs;d.params=JSON.parse(JSON.stringify(c.params||[]));d.channels=(c.channels||[]).slice();
+  d.product=c.name;d.mfr=c.mfr||'';d.orderNo=c.orderNo||'';d.appId=c.appId||'';d.dca=c.dca||'';
+  touch(d);commit('Replace device '+addr);index();renderAll();
+  $('#adlg').close();msg(`Replaced ${addr}: ${kept} link(s) kept.`);
+}
+
+/* ================= exports ================= */
+const SUFFIX=/\s+(status|state|feedback|fb)$/i;
+function pairs(){
+  const map=new Map();
+  for(const g of allGA()){
+    if(!(FW[g.dpt]||YT[g.dpt]))continue;
+    const isState=SUFFIX.test(g.name),base=g.name.replace(SUFFIX,'').trim(),k=base.toLowerCase()+'|'+g.dpt;
+    const e=map.get(k)||{name:base,dpt:g.dpt};
+    if(isState)e.state=g.ga;else e.cmd=g.ga;
+    map.set(k,e);
+  }
+  const list=[...map.values()];
+  list.forEach(e=>{if(e.dpt!=='1.001'&&e.dpt!=='5.001'&&!e.state){e.state=e.cmd;delete e.cmd;}});
+  return list;
+}
+function exportH(){
+  const q=s=>s?`"${s}"`:'nullptr',cs=s=>s.replace(/\\/g,'\\\\').replace(/"/g,'\\"');const used=new Set();
+  const lines=pairs().filter(e=>FW[e.dpt]).map(e=>{const id=e.name.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'')||'entity';let n=id,c=2;while(used.has(n))n=id+'_'+c++;used.add(n);return `  {"${n}", "${cs(e.name)}", ${FW[e.dpt]}, ${q(e.cmd)}, ${q(e.state)}},`;});
+  return `// Generated by BusSmith - project: ${P.name}\n// (only 1.001, 5.001 and 9.001 are supported by the gateway firmware)\nstatic Entity entities[] = {\n${lines.join('\n')}\n};\n`;
+}
+function exportY(){
+  const y=s=>JSON.stringify(s);const sec={switch:[],binary_sensor:[],number:[],sensor:[]};
+  for(const e of pairs()){
+    const head=`    - name: ${y(e.name)}\n`,st=e.state?`      state_address: ${y(e.state)}\n`:'';
+    if(e.dpt==='1.001'){if(e.cmd)sec.switch.push(head+`      address: ${y(e.cmd)}\n`+st);else sec.binary_sensor.push(head+st);}
+    else if(e.dpt==='5.001'){if(e.cmd)sec.number.push(head+`      address: ${y(e.cmd)}\n`+st+'      type: percent\n');else sec.sensor.push(head+st+'      type: percent\n');}
+    else sec.sensor.push(head+st+`      type: ${YT[e.dpt]}\n`);
+  }
+  let t=`# Generated by BusSmith - project: ${P.name}\nknx:\n`;for(const k of Object.keys(sec))if(sec[k].length)t+=`  ${k}:\n${sec[k].join('')}`;return t;
+}
+const expGCSV=()=>'group address,name,data type,description\n'+[...gaMap].map(([g,s])=>`${s},${csvq(g.name)},${g.dpt},${csvq(g.desc)}`).join('\n')+'\n';
+const expDCSV=()=>'address,name,description,status,serial\n'+[...devMap].map(([v,s])=>`${s},${csvq(v.name)},${csvq(v.desc)},${v.status},${csvq(v.serial)}`).join('\n')+'\n';
+function expLCSV(){const r=[];devMap.forEach((s,v)=>v.objs.forEach(x=>[x.ga,...x.links].filter(Boolean).forEach(g=>r.push(`${s},${csvq(v.name)},${csvq(x.name)},${g}`))));return 'device,device name,object,group address\n'+r.join('\n')+'\n';}
+
+/* ================= files / import ================= */
+let outName='out.txt';
+function showOut(t,text,f){outName=f;$('#ot').textContent=t;$('#otext').value=text;$('#out').showModal();}
+function download(n,text,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:type||'text/plain'}));a.download=n;a.click();URL.revokeObjectURL(a.href);}
+$('#odl').onclick=()=>download(outName,$('#otext').value);
+$('#ocopy').onclick=async()=>{await navigator.clipboard.writeText($('#otext').value);$('#ocopy').textContent='Copied';setTimeout(()=>$('#ocopy').textContent='Copy',1200);};
+function fileAct(b){
+  switch(b){
+  case 'new':if(!guard())return;if(confirm('Start a new empty project? (You can undo this.)')){P=fix({name:'New project',creBy:ME.id});sel=null;commit('New project');renderAll();}break;
+  case 'open':if(guard())$('#file').click();break;
+  case 'save':download((P.name||'project').replace(/\W+/g,'_')+'.bussmith.json',JSON.stringify(P,null,2),'application/json');msg('Project saved to a file.');break;
+  case 'import':if(guard())$('#kfile').click();break;
+  case 'impprod':if(guard())$('#pfile').click();break;
+  case 'expH':showOut('ESP32 config.h entities',exportH(),'nlk_entities.h');break;
+  case 'expY':showOut('Home Assistant YAML',exportY(),'nlk_knx.yaml');break;
+  case 'expG':showOut('Group addresses CSV',expGCSV(),'nlk_group_addresses.csv');break;
+  case 'expD':showOut('Devices CSV',expDCSV(),'nlk_devices.csv');break;
+  case 'expL':showOut('Group links CSV',expLCSV(),'nlk_links.csv');break;
+  case 'settings':openSettings('apps');break;
+  case 'about':alert('BusSmith – KNX project and diagnostics tool.\n\nGroup addresses, topology, buildings, catalog, group object links, reports, live group monitor, bus scan and address programming through the BusSmith ESP32 gateway.\nNot affiliated with the KNX Association.');break;
+  }
+}
+$('#file').onchange=async e=>{
+  const f=e.target.files[0];e.target.value='';if(!f)return;
+  try{const d=JSON.parse(await f.text());if(!Array.isArray(d.mains))throw 0;P=fix(d);sel=null;commit('Open '+f.name);renderAll();msg('Opened '+f.name);}
+  catch(err){alert('Not a valid BusSmith project file.');}
+};
+const loadScript=u=>new Promise((res,rej)=>{if(window.JSZip)return res();const s=document.createElement('script');s.src=u;s.onload=res;s.onerror=()=>rej('Could not load the unzip library (internet needed once).');document.head.appendChild(s);});
+$('#kfile').onchange=async e=>{
+  const f=e.target.files[0];e.target.value='';if(!f)return;
+  try{
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');
+    const zip=await JSZip.loadAsync(f);
+    const f0=Object.keys(zip.files).find(n=>/^P-[^/]+\/0\.xml$/i.test(n));
+    if(!f0)throw 'No project data found. The file may be password protected or in a format this importer does not know.';
+    const doc=new DOMParser().parseFromString(await zip.files[f0].async('string'),'application/xml');
+    if(doc.querySelector('parsererror'))throw 'The project XML could not be read.';
+    const NP=fix({name:f.name.replace(/\.[^.]+$/,''),creBy:ME.id});NP.catalog=seedCatalog();
+    let R=null;try{R=await readEts(zip);}catch(x){R=null;}
+    const pend=[],devAddr=new Map();
+    const gaById=new Map();
+    const ensureMain=(n,name)=>{let m=NP.mains.find(x=>x.num===n);if(!m){m={num:n,name:name||'Main '+n,desc:'',pass:'No',comments:[],mids:[]};NP.mains.push(m);}return m;};
+    doc.querySelectorAll('GroupAddress').forEach(el=>{
+      const addr=parseInt(el.getAttribute('Address'),10);if(isNaN(addr))return;
+      const mn=addr>>11,md=(addr>>8)&7,sb=addr&255;
+      const chain=[];let p=el.parentElement;while(p){if(p.tagName==='GroupRange')chain.unshift(p);p=p.parentElement;}
+      const m=ensureMain(mn,chain[0]&&chain[0].getAttribute('Name'));
+      let d=m.mids.find(x=>x.num===md);if(!d){d={num:md,name:(chain[1]&&chain[1].getAttribute('Name'))||'Middle '+md,desc:'',pass:'No',comments:[],gas:[]};m.mids.push(d);}
+      const dp=(el.getAttribute('DatapointType')||'').match(/DPS?T-(\d+)(?:-(\d+))?/);let dpt='';if(dp)dpt=dp[1]+'.'+String(dp[2]||1).padStart(3,'0');
+      d.gas.push({num:sb,name:el.getAttribute('Name')||'Address '+sb,desc:el.getAttribute('Description')||'',dpt:DPT_NAME[dpt]?dpt:'',comments:[]});
+      const s=`${mn}/${md}/${sb}`;gaById.set(el.getAttribute('Id'),s);const t=(el.getAttribute('Id')||'').match(/GA-\d+$/);if(t)gaById.set(t[0],s);
+    });
+    NP.mains.sort(byNum);NP.mains.forEach(m=>{m.mids.sort(byNum);m.mids.forEach(d=>d.gas.sort(byNum));});
+    doc.querySelectorAll('Topology Area').forEach(ae=>{
+      const an=parseInt(ae.getAttribute('Address'),10);if(isNaN(an))return;
+      const ar={num:an,name:ae.getAttribute('Name')||'Area '+an,desc:'',comments:[],lines:[]};NP.topo.areas.push(ar);
+      ae.querySelectorAll(':scope > Line').forEach(le=>{
+        const ln=parseInt(le.getAttribute('Address'),10);if(isNaN(ln))return;
+        const li={num:ln,name:le.getAttribute('Name')||`Line ${an}.${ln}`,desc:'',comments:[],devices:[]};ar.lines.push(li);
+        le.querySelectorAll('DeviceInstance').forEach(de=>{
+          const dn=parseInt(de.getAttribute('Address'),10);if(isNaN(dn))return;
+          const dv={num:dn,name:de.getAttribute('Name')||`Device ${an}.${ln}.${dn}`,desc:de.getAttribute('Description')||'',comments:[],serial:de.getAttribute('SerialNumber')||'',objs:[]};
+          de.querySelectorAll('ComObjectInstanceRef').forEach((co,i)=>{
+            const links=(co.getAttribute('Links')||'').split(/\s+/).filter(Boolean).map(l=>gaById.get(l)||gaById.get((l.match(/GA-\d+$/)||[''])[0])).filter(Boolean);
+            if(links.length)dv.objs.push({num:i+1,name:co.getAttribute('Text')||co.getAttribute('Name')||'',func:co.getAttribute('FunctionText')||'',ga:links[0],links:links.slice(1),_rid:co.getAttribute('RefId')||''});
+          });
+          li.devices.push(dv);devAddr.set(de.getAttribute('Id'),`${an}.${ln}.${dn}`);pend.push({dv,de});
+        });
+        li.devices.sort(byNum);
+      });
+      ar.lines.sort(byNum);
+    });
+    NP.topo.areas.sort(byNum);
+    msg('Reading products and parameters…');
+    const prodCat=new Map();
+    for(const {dv,de} of pend){
+      const pr=R&&R.prod.get(de.getAttribute('ProductRefId'));
+      const app=R?await R.getApp(R.appOfH2P(de.getAttribute('Hardware2ProgramRefId'))||(pr&&pr.app)):null;
+      if(pr){
+        dv.mfr=pr.mfr;dv.product=pr.name;dv.orderNo=pr.orderNo;
+        if(!prodCat.has(pr.id)){const c={id:uid(),mfr:pr.mfr,name:pr.name,orderNo:pr.orderNo,desc:pr.desc,comments:[],objs:app?JSON.parse(JSON.stringify(app.objs)):[],params:app?JSON.parse(JSON.stringify(app.params)):[],appId:app?app.id:'',channels:app?app.channels.slice():[],dca:'',cre:now()};prodCat.set(pr.id,c);NP.catalog.push(c);}
+      }
+      dv.objs.forEach(x=>{
+        const a=app&&app.refMap.get(x._rid);delete x._rid;
+        if(a){x.len=a.len;x.flags=a.flags;x.dpt=a.dpt;x.prio=a.prio;x.channel=a.channel;x.func=x.func||a.func;x.name=x.name||a.name;x.num=a.num;}
+        else x.name=x.name||'Object';
+      });
+      dv.objs.sort((a,b)=>a.num-b.num);
+      dv.params=[];dv.channels=app?app.channels.slice():[];dv.appId=app?app.id:'';
+      de.querySelectorAll('ParameterInstanceRef').forEach(pi=>{
+        if(dv.params.length>=400)return;
+        const x=app&&app.mkParam(pi.getAttribute('RefId'));if(!x)return;
+        const v=pi.getAttribute('Value');if(v!=null)x.value=v;dv.params.push(x);
+      });
+    }
+    const BTMAP={Building:'building',BuildingPart:'part',Floor:'floor',Room:'room',DistributionBoard:'board',Stairway:'stairway',Corridor:'corridor',Cabinet:'cabinet'};
+    const spaceNode=(sp,trade)=>{
+      const n={id:uid(),name:sp.getAttribute('Name')||'Space',desc:sp.getAttribute('Description')||'',btype:trade?'trade':(BTMAP[sp.getAttribute('Type')]||'part'),comments:[],kids:[],devs:[],cre:now()};
+      if(trade)n.trade=true;
+      [...sp.children].forEach(ch=>{
+        if(ch.tagName==='Space')n.kids.push(spaceNode(ch,false));
+        else if(ch.tagName==='DeviceInstanceRef'){const a=devAddr.get(ch.getAttribute('RefId'));if(a)n.devs.push(a);}
+      });
+      return n;
+    };
+    doc.querySelectorAll('Locations > Space').forEach(sp=>NP.build.push(spaceNode(sp,false)));
+    doc.querySelectorAll('Trades > Trade').forEach(sp=>NP.build.push(spaceNode(sp,true)));
+    if(!NP.mains.length&&!NP.topo.areas.length)throw 'The file contained no group addresses or topology.';
+    fix(NP);
+    if(!confirm(`Import "${NP.name}"?\nThis replaces the current project (you can undo it).`))return;
+    P=NP;sel=null;commit('Import '+f.name);renderAll();msg('Imported '+f.name);
+  }catch(err){alert('Import failed: '+(err&&err.message?err.message:err));msg('Import failed.');}
+};
+
+/* ================= ETS product database / project reader (.knxprod, .vd5, .knxproj) ================= */
+const MFRN={'M-0001':'Siemens','M-0002':'ABB','M-0004':'Albrecht Jung','M-0006':'Busch-Jaeger','M-0007':'GIRA','M-0008':'Hager','M-0083':'MDT technologies'};
+const xmlOf=async(zip,n)=>{try{const d=new DOMParser().parseFromString(await zip.files[n].async('string'),'application/xml');return d.querySelector('parsererror')?null:d;}catch(e){return null;}};
+const dptOf=a=>{const m=(a||'').match(/DPS?T-(\d+)(?:-(\d+))?/);if(!m)return'';const d=m[1]+'.'+String(m[2]||1).padStart(3,'0');return DPT_NAME[d]?d:'';};
+function parseApp(doc){
+  const ap=doc.querySelector('ApplicationProgram');if(!ap)return null;
+  const objById=new Map();doc.querySelectorAll('ComObject').forEach(o=>objById.set(o.getAttribute('Id'),o));
+  const mkObj=(ref,o,i)=>{
+    const A=n=>{let v=ref?ref.getAttribute(n):null;if(v==null&&o)v=o.getAttribute(n);return v;};
+    const num=parseInt(o&&o.getAttribute('Number'),10);
+    return {num:isNaN(num)?i+1:num,name:A('Text')||A('Name')||'Object',func:A('FunctionText')||'',len:(A('ObjectSize')||'1 Bit').toLowerCase(),
+      flags:(A('CommunicationFlag')!=='Disabled'?'C':'')+(A('ReadFlag')==='Enabled'?'R':'')+(A('WriteFlag')!=='Disabled'?'W':'')+(A('TransmitFlag')==='Enabled'?'T':'')+(A('UpdateFlag')==='Enabled'?'U':''),
+      dpt:dptOf(A('DatapointType')),prio:A('Priority')||'Low',ga:'',links:[],channel:''};
+  };
+  const refMap=new Map();let objs=[],i=0;
+  doc.querySelectorAll('ComObjectRef').forEach(r=>{const o=objById.get(r.getAttribute('RefId'));if(!o)return;const x=mkObj(r,o,i++);refMap.set(r.getAttribute('Id'),x);objs.push(x);});
+  if(!objs.length)objById.forEach(o=>objs.push(mkObj(null,o,i++)));
+  // channels (unique names, in order)
+  const chName=new Map(),used=new Map(),channels=[];let cn=0;
+  doc.querySelectorAll('Channel').forEach(c=>{
+    let t=c.getAttribute('Text')||c.getAttribute('Name')||('Channel '+(++cn));
+    const k=(used.get(t)||0)+1;used.set(t,k);if(k>1)t+=' ('+k+')';
+    chName.set(c,t);channels.push(t);
+  });
+  const chOf=el=>{const c=el.closest('Channel');return c?chName.get(c)||'':'';};
+  doc.querySelectorAll('Dynamic ComObjectRefRef').forEach(rr=>{const x=refMap.get(rr.getAttribute('RefId'));if(x&&!x.channel)x.channel=chOf(rr);});
+  objs.sort((a,b)=>a.num-b.num);objs=objs.slice(0,1500);
+  const types=new Map();doc.querySelectorAll('ParameterType').forEach(t=>types.set(t.getAttribute('Id'),[...t.querySelectorAll('Enumeration')].map(e=>[e.getAttribute('Value'),e.getAttribute('Text')||e.getAttribute('Value')])));
+  const pById=new Map();doc.querySelectorAll('Parameter').forEach(p=>pById.set(p.getAttribute('Id'),p));
+  const prById=new Map();doc.querySelectorAll('ParameterRef').forEach(r=>{const p=pById.get(r.getAttribute('RefId'));if(p)prById.set(r.getAttribute('Id'),{r,p});});
+  const meta=new Map();
+  const mkParam=id=>{
+    const e=prById.get(id);if(!e)return null;const r=e.r,p=e.p;
+    if((r.getAttribute('Access')||p.getAttribute('Access'))==='None')return null;
+    const text=r.getAttribute('Text')||p.getAttribute('Text');if(!text)return null;
+    let val=r.getAttribute('Value');if(val==null)val=p.getAttribute('Value');if(val==null)val='';
+    const en=types.get(p.getAttribute('ParameterType'))||[];
+    const m=meta.get(id)||{channel:'',group:''};
+    const x={name:text,value:val,def:val,channel:m.channel,group:m.group};if(en.length)x.opts=en;return x;
+  };
+  let params=[];
+  doc.querySelectorAll('Dynamic ParameterRefRef').forEach(rr=>{
+    const id=rr.getAttribute('RefId');if(meta.has(id))return;
+    const chain=[];for(let p=rr.parentElement;p&&p.tagName!=='Dynamic'&&p.tagName!=='Channel';p=p.parentElement){
+      if(p.tagName==='ParameterBlock'){const t=p.getAttribute('Text')||p.getAttribute('Name');if(t&&chain[0]!==t)chain.unshift(t);}}
+    meta.set(id,{channel:chOf(rr),group:chain.join(' / ')});
+    const x=mkParam(id);if(x)params.push(x);
+  });
+  if(!params.length)prById.forEach((v,id)=>{const x=mkParam(id);if(x)params.push(x);});
+  params=params.slice(0,1500);
+  return {id:ap.getAttribute('Id'),name:ap.getAttribute('Name')||'',objs,params,channels,refMap,mkParam};
+}
+async function readEts(zip,R,depth){
+  R=R||{prod:new Map(),h2p:new Map(),appPath:new Map(),cache:new Map(),files:[],hasDca:false};depth=depth||0;
+  const all=Object.keys(zip.files).filter(n=>!zip.files[n].dir);const nested=[];
+  for(const n of all){
+    if(depth===0)R.files.push(n);
+    const isXml=/\.xml$/i.test(n);
+    if((!isXml&&/dca/i.test(n))||/(^|\/)dca[^/]*\//i.test(n))R.hasDca=true;
+    if(!isXml){if(depth<2&&/\.(knxprod|zip|vd5|vd4|etsapp)$/i.test(n))nested.push(n);continue;}
+    const m=n.match(/(?:^|\/)(M-[0-9A-Fa-f]+)\/([^/]+)$/);if(!m)continue;
+    const mfrId=m[1],base=m[2];
+    if(/^Hardware\.xml$/i.test(base)){
+      const doc=await xmlOf(zip,n);if(!doc)continue;
+      doc.querySelectorAll('Hardware').forEach(hw=>{
+        let app='';
+        hw.querySelectorAll('Hardware2Program').forEach(h=>{const ref=h.querySelector('ApplicationProgramRef');const a=ref?ref.getAttribute('RefId'):'';R.h2p.set(h.getAttribute('Id'),a);if(a)app=a;});
+        hw.querySelectorAll('Product').forEach(p=>R.prod.set(p.getAttribute('Id'),{id:p.getAttribute('Id'),mfrId,mfr:MFRN[mfrId]||mfrId,name:p.getAttribute('Text')||hw.getAttribute('Name')||'Product',orderNo:p.getAttribute('OrderNumber')||'',desc:p.getAttribute('VisibleDescription')||'',app}));
+      });
+    }else if(/_A-.*\.xml$/i.test(base))R.appPath.set(base.replace(/\.xml$/i,''),{zip,n});
+  }
+  for(const n of nested){try{const z2=await JSZip.loadAsync(await zip.files[n].async('uint8array'));await readEts(z2,R,depth+1);}catch(e){}}
+  if(depth===0){
+    R.getApp=async id=>{
+      if(!id)return null;if(R.cache.has(id))return R.cache.get(id);
+      let e=R.appPath.get(id);if(!e){for(const [k,v] of R.appPath)if(k.startsWith(id)||id.startsWith(k)){e=v;break;}}
+      let a=null;if(e){const d=await xmlOf(e.zip,e.n);if(d)a=parseApp(d);}
+      R.cache.set(id,a);return a;
+    };
+    R.appOfH2P=id=>R.h2p.get(id)||(id||'').replace(/_H-[^_]+_HP-/,'_A-');
+  }
+  return R;
+}
+function pickProducts(list){
+  return new Promise(res=>{
+    const chosen=new Set(list.length<=5?list.map((_,i)=>i):[]);
+    $('#pinfo').textContent=`${list.length} product(s) found. Choose the ones to add to your catalog.`;$('#pfilter').value='';
+    const draw=()=>{
+      const q=$('#pfilter').value.trim().toLowerCase();
+      $('#plist').innerHTML=list.map((p,i)=>({p,i})).filter(({p})=>!q||(p.name+' '+p.orderNo+' '+p.mfr).toLowerCase().includes(q)).slice(0,500)
+        .map(({p,i})=>`<label class="prow"><input type="checkbox" data-i="${i}" ${chosen.has(i)?'checked':''} style="display:inline;width:auto"> <b>${esc(p.name)}</b> <span class="mut">${esc(p.orderNo)} · ${esc(p.mfr)}</span></label>`).join('')||'<div class="mut" style="padding:8px">No match.</div>';
+      $('#pcount').textContent=chosen.size+' selected';
+    };
+    $('#plist').onchange=e=>{const i=+e.target.dataset.i;if(e.target.checked)chosen.add(i);else chosen.delete(i);$('#pcount').textContent=chosen.size+' selected';};
+    $('#pfilter').oninput=draw;
+    $('#pall').onclick=()=>{document.querySelectorAll('#plist input[data-i]').forEach(c=>chosen.add(+c.dataset.i));draw();};
+    $('#pnone').onclick=()=>{chosen.clear();draw();};
+    const d=$('#pdlg');d.onclose=()=>res(d.returnValue==='ok'?[...chosen].map(i=>list[i]):null);
+    draw();d.showModal();
+  });
+}
+$('#pfile').onchange=async e=>{
+  const f=e.target.files[0];e.target.value='';if(!f)return;
+  try{
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');
+    let zip;try{zip=await JSZip.loadAsync(f);}catch(x){throw 'This file is not a ZIP-based ETS product database. BusSmith reads .knxprod and ZIP-based .vd5 files. If this is an older binary .vd5/.vd4 file, export it from ETS as .knxprod and try again.';}
+    msg('Reading product database…');
+    const R=await readEts(zip);
+    const list=[...R.prod.values()].filter(p=>p.app);
+    if(!list.length&&R.files.some(n=>/AddInManifest\.xml$/i.test(n)))throw 'This .etsapp is an ETS add-in (a Windows program, the DCA). It contains no products, parameters or group objects, so there is nothing to import from it.\n\nTo get the product data, import the manufacturer\'s product database (.knxprod) or an ETS project (.knxproj) that contains the device.';
+    if(!list.length)throw 'No products were found in this file.\n\nIt contains: '+R.files.slice(0,12).join(', ')+(R.files.length>12?' ...':'')+'\n\nPlease send this list (or the file) so the reader can be adapted.';
+    const pick=await pickProducts(list);if(!pick||!pick.length){msg('Nothing imported.');return;}
+    let added=0,skipped=0;
+    for(const p of pick){
+      if(P.catalog.some(c=>c.name===p.name&&c.orderNo===p.orderNo&&c.mfr===p.mfr)){skipped++;continue;}
+      const a=await R.getApp(p.app);
+      P.catalog.push({id:uid(),mfr:p.mfr,name:p.name,orderNo:p.orderNo,desc:p.desc,comments:[],objs:a?JSON.parse(JSON.stringify(a.objs)):[],params:a?JSON.parse(JSON.stringify(a.params)):[],appId:a?a.id:p.app,channels:a?a.channels.slice():[],dca:(R.hasDca||/dca/i.test(f.name))?f.name:'',cre:now()});added++;
+    }
+    fix(P);mode='catalog';commit('Import products from '+f.name);index();renderAll();
+    msg(`Imported ${added} product(s)${skipped?`, ${skipped} already in the catalog`:''}.`);
+  }catch(err){alert('Import failed: '+(err&&err.message?err.message:err));msg('Import failed.');}
+};
+
+/* ================= connection: KNX USB interface (WebHID) or ESP32 gateway ================= */
+let ws=null,scanCount=0,scanNew=0,paFound=[],pendingVerify=null;
+let usb=null,scanTok=0,confWait=null;const usbRaw=[];
+const wsOpen=()=>ws&&ws.readyState===1;
+const usbOpenNow=()=>!!(usb&&usb.dev.opened);
+const isConnected=()=>usbOpenNow()||wsOpen();
+const hx=a=>Array.from(a,b=>b.toString(16).padStart(2,'0')).join(' ');
+const hex2=b=>b.toString(16).padStart(2,'0');
+
+/* ================= DALI commissioning (BusSmith version of the DLC-02 DCA) ================= */
+const DALI_TYPES=['','DT6 LED','DT8 Tunable white','DT8 RGB','DT8 RGBW','DT0 Fluorescent','Multi-Tc'];
+const dcaUI={line:'A',page:'inst',ecg:1,scn:1,test:false,bus:-1};
+const isDali=d=>d&&(dcaApps(d).length>0||/DLC-02|DALI/i.test((d.product||'')+' '+(d.name||'')));
+const daliNew=()=>({ecg:Array.from({length:64},(_,i)=>({n:i+1,desc:'',addr:'',type:''})),groups:Array.from({length:16},()=>[]),scenes:Array.from({length:16},()=>({}))});
+function daliOf(d){if(!d.dali)d.dali={A:daliNew(),B:daliNew(),bus:[]};if(!d.dali.bus)d.dali.bus=[];return d.dali;}
+function ecgGA(d,line,n,kind){
+  const hit=d.objs.find(x=>{
+    const t=(x.channel||'')+' '+(x.name||'');
+    const m=t.match(/ECG\s*(\d+)/i);if(!m||+m[1]!==n)return false;
+    const ln=t.match(/(?:DALI\s*|\[|\b)([AB])\s*[:.\]]/i);if(ln&&ln[1].toUpperCase()!==line)return false;
+    const f=(x.func||x.name||'');
+    if(/status|lock|failure|scene|relative/i.test(f))return false;
+    if(kind==='sw')return /on\/off/i.test(f);
+    if(kind==='dim')return /absolute dimming/i.test(f);
+    return /colour temperature/i.test(f)&&/2 byte/i.test(x.len||'');
+  });
+  return hit&&hit.ga?String(hit.ga):'';
+}
+function dcaView(d){
+  const D=daliOf(d),L=D[dcaUI.line],pg=dcaUI.page;
+  const nav=ln=>['inst','groups','scenes'].map(k=>`<div class="dnv ${dcaUI.line===ln&&pg===k?'on':''}" data-dca="nav" data-l="${ln}" data-p="${k}">${{inst:'Installation',groups:'Groups',scenes:'Scenes'}[k]}</div>`).join('');
+  const tb=(id,l,dis)=>`<button class="btn" data-dca="${id}" ${dis?'disabled title="'+esc(NOTYET)+'"':''}>${l}</button>`;
+  let main='';
+  if(pg==='inst'){
+    main=`<div class="dtb">${tb('reinstall','Reinstall',1)}${tb('scan','Scan',1)}${tb('pdl','Partial download',1)}${tb('fdl','Full download',1)}<button class="btn ${dcaUI.test?'pri':''}" data-dca="test">DALI test</button></div>
+    <div class="dsplit"><div class="dwrap"><table class="tbl"><thead><tr><th>Flag</th><th>ECG NO.</th><th>ECG Description</th><th>Addr</th><th>Type</th></tr></thead><tbody>${L.ecg.map(e=>`<tr class="dr ${dcaUI.ecg===e.n?'on':''}" data-dca="pick" data-n="${e.n}" data-drop="${e.n}"><td>${e.addr!==''?'●':'○'}</td><td>ECG ${e.n}</td><td><input data-dca="desc" data-n="${e.n}" value="${esc(e.desc)}"></td><td><input data-dca="addr" data-n="${e.n}" value="${esc(e.addr)}" size="4" placeholder="0–63"></td><td><select data-dca="type" data-n="${e.n}">${DALI_TYPES.map(t=>`<option ${t===e.type?'selected':''}>${esc(t)}</option>`).join('')}</select></td></tr>`).join('')}</tbody></table></div>
+    <div class="dbus"><h4>Bus devices</h4><div class="mut" style="margin-bottom:6px">Drag a bus device onto an ECG, or select an ECG and press Assign. Scanning is not available yet, so add the lamps you know by hand.</div>
+      <div class="row"><input id="dbAddr" size="5" placeholder="addr 0–63"><select id="dbType">${DALI_TYPES.slice(1).map(t=>`<option>${esc(t)}</option>`).join('')}</select><button class="btn" data-dca="busadd">+</button></div>
+      <ul class="dbl">${D.bus.map((b,i)=>`<li draggable="true" class="${dcaUI.bus===i?'on':''}" data-dca="busel" data-i="${i}" data-drag="${i}">${esc(b.addr)} · ${esc(b.type)} <a data-dca="busdel" data-i="${i}">&#10005;</a></li>`).join('')||'<li class="mut">No bus devices yet.</li>'}</ul>
+      <button class="btn" data-dca="assign">Assign to ECG ${dcaUI.ecg}</button></div></div>`;
+    if(dcaUI.test){
+      const e=L.ecg[dcaUI.ecg-1],ga=k=>ecgGA(d,dcaUI.line,e.n,k),sw=ga('sw'),dm=ga('dim'),tw=ga('tw');
+      main+=`<div class="card"><h4>DALI test — ${dcaUI.line}: ECG ${e.n}${e.desc?' ('+esc(e.desc)+')':''}</h4>`+
+      (!sw&&!dm&&!tw?'<div class="mut">No group address is linked to this ECG yet. Use "Read group links from device" (or link the ECG\'s group objects) first.</div>':
+      `<div class="kv"><div>On / Off ${sw?'<span class="mut">'+esc(sw)+'</span>':''}</div><div>${sw?B('ctlw','On','data-ga="'+sw+'" data-v="1"')+B('ctlw','Off','data-ga="'+sw+'" data-v="0"'):'<span class="mut">not linked</span>'}</div>
+      <div>Dimming ${dm?'<span class="mut">'+esc(dm)+'</span>':''}</div><div>${dm?`0 <input type="range" min="0" max="100" value="100" data-ctlr="${esc(dm)}" style="width:220px"> 100 <b id="cv_${esc(dm.replace(/\//g,'_'))}">100 %</b>`:'<span class="mut">not linked</span>'}</div>
+      <div>Colour temperature ${tw?'<span class="mut">'+esc(tw)+'</span>':''}</div><div>${tw?`2400 <input type="range" min="2400" max="6000" step="100" value="4000" data-ctlk="${esc(tw)}" style="width:220px"> 6000 <b id="cv_${esc(tw.replace(/\//g,'_'))}">4000 K</b>`:'<span class="mut">not linked</span>'}</div></div>`)+`</div>`;
+    }
+  }else if(pg==='groups'){
+    const used=L.ecg.filter(e=>e.addr!==''||e.desc);
+    main=used.length?`<div class="dwrap"><table class="tbl"><thead><tr><th>ECG</th>${Array.from({length:16},(_,i)=>`<th>G${i}</th>`).join('')}</tr></thead><tbody>${used.map(e=>`<tr><td>ECG ${e.n}${e.desc?' '+esc(e.desc):''}</td>${Array.from({length:16},(_,g)=>`<td><input type="checkbox" data-dca="grp" data-n="${e.n}" data-g="${g}" ${L.groups[g].includes(e.n)?'checked':''}></td>`).join('')}</tr>`).join('')}</tbody></table></div>`:'<div class="empty">Give ECGs an address or description on the Installation page first.</div>';
+  }else{
+    const used=L.ecg.filter(e=>e.addr!==''||e.desc),sc=L.scenes[dcaUI.scn-1];
+    main=`<div class="row" style="margin-bottom:8px">Scene <select data-dca="scn">${Array.from({length:16},(_,i)=>`<option value="${i+1}" ${dcaUI.scn===i+1?'selected':''}>Scene ${i+1}</option>`).join('')}</select><span class="mut">Level 0–100 %, empty = ECG not part of the scene.</span></div>`+
+      (used.length?`<table class="tbl"><thead><tr><th>ECG</th><th>Level (%)</th></tr></thead><tbody>${used.map(e=>`<tr><td>ECG ${e.n}${e.desc?' '+esc(e.desc):''}</td><td><input type="number" min="0" max="100" data-dca="lvl" data-n="${e.n}" value="${sc[e.n]==null?'':sc[e.n]}" style="width:80px"></td></tr>`).join('')}</tbody></table>`:'<div class="empty">Give ECGs an address or description on the Installation page first.</div>');
+  }
+  return `<div class="dca"><div class="dtop"><b>${esc((dcaApps(d)[0]||{}).name||'DLC-02-KN')}</b>
+    <button class="btn" data-dca="open">Open</button><button class="btn" data-dca="save">Save</button><button class="btn" data-dca="saveas">Save as</button><button class="btn" data-dca="upg">Upgrade</button><button class="btn" data-dca="about">About</button><button class="btn" data-dca="help">Help</button><span style="margin-left:auto" class="row"><input id="dcaIp" size="16" placeholder="gateway IP, e.g. 192.168.1.50" value="${esc(d.webip||'')}"><button class="btn pri" data-dca="web" title="Opens the DLC-02's own web page, where lamps can be scanned and assigned">Open web commissioning</button></span><input type="file" id="dcaFile" accept=".json" style="display:none"></div>
+    <div class="dbody"><div class="dnav"><h4>DALI A</h4>${nav('A')}<h4>DALI B</h4>${nav('B')}</div><div class="dmain">${main}</div></div>
+    <div class="mut" style="margin:6px">Scan and download to the device are not available in BusSmith yet. Everything on these pages is saved in your project.</div></div>`;
+}
+(function(){
+  const cur=()=>sel&&sel.k==='dev'?sel.o:null;
+  const rer=()=>renderCenter();
+  const save=l=>{commit(l||'DALI');};
+  document.addEventListener('click',e=>{
+    const t=e.target.closest('[data-dca]');if(!t||!e.target.closest('#center'))return;const d=cur();if(!d)return;
+    const D=daliOf(d),L=D[dcaUI.line],k=t.dataset.dca;
+    switch(k){
+    case 'nav':dcaUI.line=t.dataset.l;dcaUI.page=t.dataset.p;rer();break;
+    case 'pick':if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT')break;dcaUI.ecg=+t.dataset.n;rer();break;
+    case 'test':dcaUI.test=!dcaUI.test;rer();break;
+    case 'busadd':{const a=$('#dbAddr').value.trim();if(a===''||isNaN(+a)||+a<0||+a>63)return alert('Enter a DALI short address from 0 to 63.');D.bus.push({addr:a,type:$('#dbType').value});save('DALI bus device');rer();break;}
+    case 'busdel':D.bus.splice(+t.dataset.i,1);save('DALI bus device');rer();break;
+    case 'busel':dcaUI.bus=+t.dataset.i;rer();break;
+    case 'assign':{const b=D.bus[dcaUI.bus];if(!b)return alert('Select a bus device first.');const x=L.ecg[dcaUI.ecg-1];x.addr=b.addr;x.type=b.type;save('DALI assign');rer();break;}
+    case 'open':$('#dcaFile').click();break;
+    case 'web':{const ip=($('#dcaIp').value||'').trim().replace(/^https?:\/\//,'').replace(/\/.*$/,'');
+      if(!/^[\w.\-]+(:\d+)?$/.test(ip))return alert('Type the gateway\'s IP address first, for example 192.168.1.50.\nFind it on the gateway\'s OLED display (MOVE/SET buttons) or in your router\'s device list. The gateway\'s RJ-45 port must be on the same network as this computer.');
+      d.webip=ip;commit('Gateway IP');window.open('http://'+ip+'/','_blank');break;}
+    case 'save':save('DALI save');msg('DALI configuration saved in the project.');break;
+    case 'saveas':{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(D,null,1)],{type:'application/json'}));a.download=(d.name||'dali').replace(/\W+/g,'_')+'-dali.json';a.click();break;}
+    case 'upg':alert('BusSmith has no separate DCA versions to upgrade. The DALI pages are part of BusSmith.');break;
+    case 'about':alert('DALI commissioning in BusSmith\nWorks offline: ECGs, groups and scenes are stored in your project.\nScan and download to the DLC-02 are not available yet.');break;
+    case 'help':alert('1. Installation: describe each ECG, give it its DALI short address and type, or drag bus devices onto ECGs.\n2. Groups: tick which ECGs belong to each group.\n3. Scenes: set the level of each ECG per scene.\n4. DALI test: switch, dim and tune a selected ECG over KNX.');break;
+    }
+  });
+  document.addEventListener('change',e=>{
+    const t=e.target;if(t.id==='dcaFile'){const f=t.files[0],d=cur();if(!f||!d)return;f.text().then(x=>{try{const j=JSON.parse(x);if(!j.A||!j.B)throw 0;d.dali=j;commit('DALI open');renderCenter();msg('DALI configuration loaded.');}catch(_){alert('That is not an BusSmith DALI file.');}});return;}
+    if(!t.dataset||!t.dataset.dca||!t.closest('#center'))return;const d=cur();if(!d)return;
+    const D=daliOf(d),L=D[dcaUI.line],k=t.dataset.dca,n=+t.dataset.n;
+    if(k==='desc'){L.ecg[n-1].desc=t.value;commit('DALI');}
+    else if(k==='addr'){const v=t.value.trim().replace(/^[AB]/i,'');if(v!==''&&(isNaN(+v)||+v<0||+v>63)){alert('DALI short address: 0 to 63.');t.value=L.ecg[n-1].addr;return;}L.ecg[n-1].addr=v;commit('DALI');renderCenter();}
+    else if(k==='type'){L.ecg[n-1].type=t.value;commit('DALI');}
+    else if(k==='grp'){const g=+t.dataset.g,a=L.groups[g],i=a.indexOf(n);if(t.checked&&i<0)a.push(n);if(!t.checked&&i>=0)a.splice(i,1);commit('DALI');}
+    else if(k==='scn'){dcaUI.scn=+t.value;renderCenter();}
+    else if(k==='lvl'){const sc=L.scenes[dcaUI.scn-1];if(t.value==='')delete sc[n];else sc[n]=Math.max(0,Math.min(100,+t.value));commit('DALI');}
+  });
+  document.addEventListener('dragstart',e=>{const t=e.target.closest&&e.target.closest('[data-drag]');if(t)e.dataTransfer.setData('text/plain',t.dataset.drag);});
+  document.addEventListener('dragover',e=>{if(e.target.closest&&e.target.closest('[data-drop]'))e.preventDefault();});
+  document.addEventListener('drop',e=>{
+    const r=e.target.closest&&e.target.closest('[data-drop]');if(!r)return;e.preventDefault();
+    const d=cur();if(!d)return;const D=daliOf(d),b=D.bus[+e.dataTransfer.getData('text/plain')];if(!b)return;
+    const x=D[dcaUI.line].ecg[+r.dataset.drop-1];x.addr=b.addr;x.type=b.type;dcaUI.ecg=x.n;commit('DALI assign');renderCenter();
+  });
+})();
+
+/* ================= ETS-style Parameters page ================= */
+const pui={ch:null,grp:null,open:new Set(),hl:false};
+const isCheck=p=>p.opts&&p.opts.length===2&&String(p.opts[0][0])==='0'&&String(p.opts[1][0])==='1';
+function parTree(v){
+  const tree=[];
+  v.params.forEach((p,i)=>{
+    const c=p.channel||'General',g=p.group||'';
+    let C=tree.find(x=>x.c===c);if(!C){C={c,pages:[]};tree.push(C);}
+    let G=C.pages.find(x=>x.g===g);if(!G){G={g,idx:[]};C.pages.push(G);}
+    G.idx.push(i);
+  });
+  return tree;
+}
+function parView(v){
+  const tree=parTree(v);
+  if(pui.ch==null||!tree.some(C=>C.c===pui.ch)){pui.ch=tree[0].c;pui.grp=tree[0].pages[0].g;pui.open=new Set([pui.ch]);}
+  const cur=tree.find(C=>C.c===pui.ch),pg=cur.pages.find(G=>G.g===pui.grp)||cur.pages[0];
+  const addr=devMap.get(v)||'';
+  const left=tree.map(C=>{
+    const op=pui.open.has(C.c);
+    return `<div class="pch" data-pui="tog" data-c="${esc(C.c)}"><span class="pm">${op?'−':'+'}</span>${esc(C.c)}</div>`+
+      (op?C.pages.map(G=>`<div class="ppg ${C.c===pui.ch&&G.g===pg.g?'on':''}" data-pui="pg" data-c="${esc(C.c)}" data-g="${esc(G.g)}">${esc(G.g||C.c)}</div>`).join(''):'');
+  }).join('');
+  const rows=pg.idx.map(i=>{
+    const p=v.params[i],chg=pui.hl&&p.def!=null&&String(p.value)!==String(p.def);
+    let ctl;
+    if(isCheck(p))ctl=`<input type="checkbox" data-pck="${i}" ${String(p.value)==='1'?'checked':''}>`;
+    else if(p.opts&&p.opts.length)ctl=`<select data-pi="${i}" data-pf="value">${p.opts.map(o=>`<option value="${esc(o[0])}" ${String(o[0])===String(p.value)?'selected':''}>${esc(o[1])}</option>`).join('')}</select>`;
+    else ctl=`<input data-pi="${i}" data-pf="value" value="${esc(p.value)}">`;
+    const dtxt=p.def==null?'':(p.opts&&p.opts.find(o=>String(o[0])===String(p.def))?p.opts.find(o=>String(o[0])===String(p.def))[1]:p.def);
+    const dv=isCheck(p)&&p.def!=null?(String(p.def)==='1'?'Checked':'Unchecked'):dtxt;
+    return `<div class="prow ${chg?'chg':''}" ${p.def!=null?'title="Default Value: '+esc(dv)+'"':''}><span class="plb">${esc(p.name)}</span><span class="pct">${ctl}</span></div>`;
+  }).join('');
+  return `<div class="ptb"><button class="btn" disabled title="${esc(NOTYET)}">Download</button><button class="btn ${pui.hl?'pri':''}" data-pui="hl">Highlight Changes</button><button class="btn" data-pui="def">Default Parameters</button></div>
+  <div class="pbc">${esc(addr+' '+v.name)} &gt; ${esc(pg.g||cur.c)}</div>
+  <div class="psplit"><div class="ptree">${left}</div><div class="pbody"><div class="phd">${esc(cur.c.toUpperCase())}${pg.g?' · '+esc(pg.g.toUpperCase()):''}</div>${rows}</div></div>`;
+}
+document.addEventListener('click',e=>{
+  const t=e.target.closest('[data-pui]');if(!t||!e.target.closest('#center'))return;
+  const d=sel&&sel.k==='dev'?sel.o:null;if(!d)return;
+  const k=t.dataset.pui;
+  if(k==='tog'){const c=t.dataset.c;if(pui.open.has(c))pui.open.delete(c);else pui.open.add(c);renderCenter();}
+  else if(k==='pg'){pui.ch=t.dataset.c;pui.grp=t.dataset.g;renderCenter();}
+  else if(k==='hl'){pui.hl=!pui.hl;renderCenter();}
+  else if(k==='def'){
+    const n=d.params.filter(p=>p.def!=null&&String(p.value)!==String(p.def)).length;
+    if(!n)return msg('All parameters already have their default value (or no defaults are known: re-import the project to get them).');
+    if(!canEdit()||!confirm('Reset '+n+' parameter(s) of this device to their default values?'))return;
+    d.params.forEach(p=>{if(p.def!=null)p.value=p.def;});commit('Default parameters');renderCenter();msg('Parameters reset to default.');
+  }
+});
+document.addEventListener('change',e=>{
+  const t=e.target;if(!t.dataset||t.dataset.pck==null||!t.closest('#center'))return;
+  const d=sel&&sel.k==='dev'?sel.o:null;if(!d||!canEdit())return;
+  const p=d.params[+t.dataset.pck];if(!p)return;p.value=t.checked?'1':'0';commit('Parameter '+p.name);renderCenter();
+});
+let ctlTimer=0;
+const ctlSend=t=>{
+  if(t.dataset.ctlr!==undefined){const b=Math.round(+t.value*255/100).toString(16).padStart(2,'0');sendCmd('gwrite '+t.dataset.ctlr+' b '+b);}
+  else{const k=Math.max(0,Math.min(65535,+t.value)).toString(16).padStart(4,'0');sendCmd('gwrite '+t.dataset.ctlk+' b '+k);}
+};
+document.addEventListener('input',e=>{const t=e.target;if(!t||!t.dataset||(t.dataset.ctlr===undefined&&t.dataset.ctlk===undefined))return;
+  const g=t.dataset.ctlr!==undefined?t.dataset.ctlr:t.dataset.ctlk,sp=document.getElementById('cv_'+g.replace(/\//g,'_'));
+  if(sp)sp.textContent=t.value+(t.dataset.ctlr!==undefined?' %':' K');
+  clearTimeout(ctlTimer);ctlTimer=setTimeout(()=>ctlSend(t),120);});
+document.addEventListener('change',e=>{const t=e.target;if(!t||!t.dataset)return;
+  if(t.dataset.ctlr!==undefined||t.dataset.ctlk!==undefined){clearTimeout(ctlTimer);ctlSend(t);}
+  else if(t.dataset.ctlt!==undefined){ctlOver[t.dataset.ctlt]=t.value;renderCenter();}});
+function sendCmd(c){
+  if(usbOpenNow())return usbCmd(c);
+  if(!wsOpen()){alert('Not connected to the KNX bus yet.\nPress "Connect" in the toolbar and pick your interface.');return false;}
+  ws.send(c);return true;
+}
+function setG(t,c){const s=$('#gstat');s.textContent=t;s.className='pill '+(c||'');}
+async function disconnect(){
+  scanTok++;
+  if(usb){try{usb.dev.removeEventListener('inputreport',usbIn);await usb.dev.close();}catch(e){}usb=null;}
+  if(ws){const w=ws;ws=null;try{w.close();}catch(e){}}
+  $('#mconn').textContent='Connect';setG('disconnected');
+}
+function wsConnect(ip){
+  localStorage.setItem('nlk.gwip',ip);$('#gwip').value=ip;
+  const g=getGws();if(!g.includes(ip)){g.push(ip);setGws(g);}
+  setG('connecting…');
+  try{ws=new WebSocket(`ws://${ip}:81`);}catch(e){setG('bad address','err');ws=null;return;}
+  const mine=ws;
+  mine.onopen=()=>{setG('ESP32 '+ip,'ok');$('#mconn').textContent='Disconnect';msg('Connected to the ESP32 gateway at '+ip);};
+  mine.onmessage=e=>{let d;try{d=JSON.parse(e.data);}catch(x){return;}if(d.evt)handleEvt(d);else pushTelegram(d);};
+  mine.onerror=()=>setG('connection error','err');
+  mine.onclose=()=>{if(ws===mine){ws=null;$('#mconn').textContent='Connect';if($('#gstat').className.indexOf('err')<0)setG('disconnected');}};
+}
+
+/* ---- KNX USB (HID) driver: cEMI over USB HID reports ---- */
+const gaWord=s=>{const m=String(s).match(/^(\d+)\/(\d+)\/(\d+)$/);return m?((+m[1]&31)<<11)|((+m[2]&7)<<8)|(+m[3]&255):0;};
+const paWord=(a,l,d)=>((a&15)<<12)|((l&15)<<8)|(d&255);
+const paStr=v=>`${v>>12}.${(v>>8)&15}.${v&255}`,gaStr=v=>`${v>>11}/${(v>>8)&7}/${v&255}`;
+function usbFmt(dev){
+  const out=(dev.collections||[]).flatMap(c=>c.outputReports||[]);
+  const o=out.find(x=>x.reportId===1)||out[0];
+  if(!o)return {rid:1,len:63};
+  const bits=(o.items||[]).reduce((s,i)=>s+i.reportSize*i.reportCount,0);
+  return {rid:o.reportId,len:Math.max(16,Math.ceil(bits/8))};
+}
+function hidInfo(dev){
+  const rep=a=>(a||[]).map(r=>'id'+r.reportId+':'+((r.items||[]).reduce((s,i)=>s+i.reportSize*i.reportCount,0)/8)+'B').join(' ');
+  const L=[`INFO ${dev.productName} VID ${(dev.vendorId||0).toString(16)} PID ${(dev.productId||0).toString(16)}`];
+  (dev.collections||[]).forEach(c=>L.push(`INFO collection usagePage 0x${(c.usagePage||0).toString(16)} usage 0x${(c.usage||0).toString(16)} in[${rep(c.inputReports)}] out[${rep(c.outputReports)}] feature[${rep(c.featureReports)}]`));
+  return L;
+}
+async function usbSend(body,proto,emi){
+  const fm=usbFmt(usb.dev),n=body.length,r=new Uint8Array(fm.len);
+  if(n+10>fm.len){msg('USB frame too long for this interface.');return false;}
+  r[0]=0x13;r[1]=8+n;r[3]=8;r[4]=n>>8;r[5]=n&255;r[6]=proto;r[7]=emi;r.set(body,10);
+  usbRaw.push('TX '+hx(r.subarray(0,10+n)));if(usbRaw.length>80)usbRaw.shift();
+  try{await usb.dev.sendReport(fm.rid,r);return true;}catch(e){msg('USB send failed: '+e.message);return false;}
+}
+const usbL=(dst,grp,tpdu)=>usbSend([0x11,0x00,0xBC,grp?0xE0:0x60,0,0,dst>>8,dst&255,tpdu.length-1,...tpdu],1,3);
+function usbIn(ev){
+  const d=new Uint8Array(ev.data.buffer,ev.data.byteOffset,ev.data.byteLength);
+  usbRaw.push('RX '+hx(d.subarray(0,Math.min(d.length,10+((d[4]<<8)|d[5])))));if(usbRaw.length>80)usbRaw.shift();
+  if(d.length<11)return;
+  const n=(d[4]<<8)|d[5];
+  if(d[6]===1&&d[7]===3)cemiIn(d.subarray(10,10+n));
+}
+function cemiIn(c){
+  const code=c[0];if(code!==0x29&&code!==0x2E)return;
+  const o=2+c[1];if(c.length<o+8)return;
+  const c1=c[o],c2=c[o+1],src=(c[o+2]<<8)|c[o+3],dst=(c[o+4]<<8)|c[o+5],len=c[o+6],t=Array.from(c.subarray(o+7,o+8+len));
+  if(!t.length)return;
+  const grp=!!(c2&0x80),dstS=grp?gaStr(dst):paStr(dst);
+  if(sess&&code===0x29&&!grp&&src===sess.dst)sessRx(t);
+  if(code===0x2E){
+    if(confWait&&confWait({dst:dstS,grp,ok:!(c1&1)}))return;
+    if(!grp||(c1&1))return;
+  }
+  const dir=code===0x2E?'tx':'rx',isGA=grp&&dst!==0;
+  let apci='',data='';
+  if(t[0]&0x80){
+    apci={0x80:'T_Connect',0x81:'T_Disconnect'}[t[0]]||(((t[0]&0xC3)===0xC2)?'T_Ack':((t[0]&0xC3)===0xC3)?'T_Nack':'control');
+  }else if(t.length>=2){
+    const a10=((t[0]&3)<<8)|t[1];
+    if(isGA){
+      const a4=a10&0x3C0;apci={0:'read',0x40:'response',0x80:'write'}[a4]||('apci 0x'+a4.toString(16));
+      if(a4!==0)data=len===1?hex2(t[1]&0x3F):t.slice(2).map(hex2).join('');
+    }else{
+      apci={0x100:'A_IndAddr_Read',0x140:'A_IndAddr_Response',0x0C0:'A_IndAddr_Write',0x300:'A_DeviceDescriptor_Read',0x340:'A_DeviceDescriptor_Response'}[a10]||('APCI 0x'+(a10&0x3C0).toString(16));
+      data=t.slice(2).map(hex2).join('');
+      if(a10===0x140&&code===0x29)handleEvt({evt:'pa',addr:paStr(src)});
+    }
+  }else apci='data';
+  pushTelegram({dir,src:paStr(src),dst:dstS,group:isGA,apci,data});
+}
+function usbProbe(a,l,d){
+  return new Promise(res=>{
+    const dst=paStr(paWord(a,l,d));
+    const to=setTimeout(()=>{confWait=null;res(false);},600);
+    confWait=c=>{if(c.grp||c.dst!==dst)return false;clearTimeout(to);confWait=null;res(c.ok);return true;};
+    usbL(paWord(a,l,d),false,[0x80]);
+  });
+}
+async function usbScan(a,l){
+  const tok=++scanTok;
+  for(let d=1;d<=255;d++){
+    if(tok!==scanTok||!usbOpenNow()){handleEvt({evt:'scanStopped'});return;}
+    const addr=`${a}.${l}.${d}`;handleEvt({evt:'progress',addr});
+    if(await usbProbe(a,l,d)){handleEvt({evt:'found',addr});await usbL(paWord(a,l,d),false,[0x81]);}
+  }
+  handleEvt({evt:'scanDone'});
+}
+/* ---- point-to-point sessions (device info, restart) ---- */
+let sess=null;const devInfo={};
+const MASKS={0x0010:'System 1 (BCU 1.0)',0x0011:'System 1 (BCU 1.1)',0x0012:'System 1 (BCU 1.2)',0x0013:'System 1 (BCU 1.3)',0x0020:'System 2 (BCU 2.0)',0x0021:'System 2 (BCU 2.1)',0x0025:'System 2 (BCU 2.5)',0x0701:'System 7 (BIM M112)',0x0705:'System 7 (BIM M112 1.2)',0x07B0:'System B',0x0910:'System 7 coupler',0x091A:'Coupler',0x2920:'IP router',0x5705:'System 5'};
+function sessWait(pred,ms){
+  return new Promise(res=>{
+    const t0=Date.now(),tick=()=>{
+      const i=sess.q.findIndex(pred);
+      if(i>=0)return res(sess.q.splice(i,1)[0]);
+      if(Date.now()-t0>ms)return res(null);
+      sess.w=tick;setTimeout(()=>{if(sess&&sess.w===tick)tick();},60);
+    };tick();
+  });
+}
+async function sessReq(apdu,pred,ms){
+  const s=sess,t=[0x40|(s.seq<<2)|apdu[0],...apdu.slice(1)];s.seq=(s.seq+1)&15;
+  await usbL(s.dst,false,t);
+  return sessWait(pred,ms||1500);
+}
+async function devSession(addr,work){
+  if(sess)throw new Error('Another device operation is still running.');
+  if(!usbOpenNow())throw new Error('Connect the USB interface first.');
+  const m=addr.split('.').map(Number);
+  if(!await usbProbe(m[0],m[1],m[2]))throw new Error(addr+' did not answer. Is it powered and on this line?');
+  sess={dst:paWord(m[0],m[1],m[2]),seq:0,q:[],w:null};
+  try{return await work();}
+  finally{await usbL(sess.dst,false,[0x81]);sess=null;}
+}
+function sessRx(t){
+  if(!sess)return;
+  if((t[0]&0xC0)===0x40)usbL(sess.dst,false,[0xC2|(t[0]&0x3C)]);   // acknowledge connected data
+  if((t[0]&0xC3)===0xC2)return;
+  sess.q.push(t);if(sess.w)sess.w();
+}
+async function devInfoRead(addr){
+  return devSession(addr,async()=>{
+    const r={addr,time:Date.now()};
+    const dd=await sessReq([0x03,0x00],t=>t.length>=4&&(t[0]&3)===3&&t[1]===0x40);
+    if(dd){r.mask=(dd[2]<<8)|dd[3];r.maskName=MASKS[r.mask]||'unknown';}
+    const prop=async(id,len)=>{
+      const x=await sessReq([0x03,0xD5,0,id,0x10,0x01],t=>t.length>=6&&t[1]===0xD6&&t[3]===id);
+      return x&&(x[4]>>4)>0&&x.length>=6+len?x.slice(6,6+len):null;
+    };
+    const sn=await prop(11,6);if(sn)r.serial=sn.map(hex2).join('');
+    const mf=await prop(12,2);if(mf)r.mfr=(mf[0]<<8)|mf[1];
+    r.ok=!!(dd||sn||mf);
+    return r;
+  });
+}
+async function devAssocRead(addr){
+  return devSession(addr,async()=>{
+    const rd=async(idx,pid,start,cnt)=>{
+      const x=await sessReq([0x03,0xD5,idx,pid,(cnt<<4)|(start>>8),start&255],t=>t.length>=6&&t[1]===0xD6&&t[2]===idx&&t[3]===pid);
+      return x&&(x[4]>>4)>0?x.slice(6):null;
+    };
+    const types={};
+    for(let i=0;i<12;i++){const d=await rd(i,1,1,1);if(!d||d.length<2)break;const ty=(d[0]<<8)|d[1];if(types[ty]==null)types[ty]=i;}
+    const ia=types[1],ib=types[2];
+    if(ia==null||ib==null)throw new Error('This device does not expose its address and association tables over the bus (older device type). Use ETS for it.');
+    const count=async idx=>{const d=await rd(idx,23,0,1);return d&&d.length>=2?(d[0]<<8)|d[1]:null;};
+    const na=await count(ia),nb=await count(ib);
+    if(na==null||nb==null)throw new Error('The device did not report its table sizes.');
+    const pull=async(idx,n,sz,label)=>{
+      const out=[];let k=1,maxc=Math.floor(10/sz);
+      while(k<=n){
+        if(k%8===1)msg(`Reading ${label}: ${k-1} of ${n}…`);
+        const d=await rd(idx,23,k,Math.min(maxc,n-k+1));
+        const got=d?Math.floor(d.length/sz):0;
+        if(!got){if(maxc>1){maxc=1;continue;}throw new Error('Could not read the '+label+' (entry '+k+' of '+n+').');}
+        for(let j=0;j<got&&k+j<=n;j++)out.push(d.slice(j*sz,(j+1)*sz));
+        k+=got;
+      }
+      return out;
+    };
+    const gas=(await pull(ia,na,2,'address table')).map(e=>(e[0]<<8)|e[1]);
+    const pairs=(await pull(ib,nb,4,'association table')).map(e=>({tsap:(e[0]<<8)|e[1],obj:(e[2]<<8)|e[3]}));
+    const assoc=pairs.filter(q=>q.tsap>=1&&q.tsap<=na).map(q=>({obj:q.obj,ga:gaStr(gas[q.tsap-1])}));
+    return {addr,gas:gas.map(gaStr),assoc};
+  });
+}
+async function devRestart(addr){
+  return devSession(addr,async()=>{await usbL(sess.dst,false,[0x40|(sess.seq<<2)|0x03,0x80]);await new Promise(r=>setTimeout(r,400));return true;});
+}
+function usbCmd(c){
+  const p=c.trim().split(/\s+/);
+  switch(p[0]){
+    case 'scan':usbScan(+p[1],+p[2]);return true;
+    case 'stop':scanTok++;return true;
+    case 'readpa':usbL(0,true,[0x01,0x00]);setTimeout(()=>handleEvt({evt:'paDone'}),3000);return true;
+    case 'writepa':{const m=(p[1]||'').split('.').map(Number),w=paWord(m[0],m[1],m[2]);usbL(0,true,[0x00,0xC0,w>>8,w&255]);setTimeout(()=>handleEvt({evt:'paWritten'}),300);return true;}
+    case 'gread':{const g=gaWord(p[1]);if(!g)return false;usbL(g,true,[0x00,0x00]);return true;}
+    case 'gwrite':{
+      const g=gaWord(p[1]);if(!g)return false;
+      if(p[2]==='s')usbL(g,true,[0x00,0x80|((+p[3])&0x3F)]);
+      else{const b=[];for(let i=0;i+1<(p[3]||'').length;i+=2)b.push(parseInt(p[3].substr(i,2),16));if(!b.length)return false;usbL(g,true,[0x00,0x80,...b]);}
+      return true;}
+  }
+  return false;
+}
+async function usbOpen(dev){
+  if(!dev.opened)await dev.open();
+  dev.addEventListener('inputreport',usbIn);
+  usb={dev,name:dev.productName||'KNX USB interface'};
+  hidInfo(dev).forEach(l=>usbRaw.push(l));
+  // protocol 0x0F: header byte 7 = service (1 Get, 3 Set), body = feature id (+ value)
+  await usbSend([0x01,0x00],0x0F,0x01);        // Get supported EMI types (interface answers 04 = cEMI)
+  await new Promise(r=>setTimeout(r,150));
+  await usbSend([0x05,0x03],0x0F,0x03);        // Set active EMI type = cEMI
+  await new Promise(r=>setTimeout(r,200));
+  await usbSend([0x05,0x00],0x0F,0x01);        // Get active EMI (log shows what it is)
+  await new Promise(r=>setTimeout(r,150));
+}
+if(navigator.hid)navigator.hid.addEventListener('disconnect',e=>{if(usb&&e.device===usb.dev){usb=null;scanTok++;$('#mconn').textContent='Connect';setG('USB interface unplugged','err');msg('The USB interface was unplugged.');}});
+
+/* ---- "Select Connection" dialog (like ETS) ---- */
+const getGws=()=>{try{const a=JSON.parse(localStorage.getItem('nlk.gws')||'null');if(Array.isArray(a))return a;}catch(e){}const o=localStorage.getItem('nlk.gwip');return o?[o]:[];};
+const setGws=a=>{try{localStorage.setItem('nlk.gws',JSON.stringify(a));}catch(e){}};
+let cdevs=[],csel='';
+const hidScore=d=>((d.collections||[]).some(c=>c.usagePage===0xFF01)?4:0)+(/usb|interface|interra|knx/i.test(d.productName||'')?2:0)-(/licen[sc]e|stick|dongle/i.test(d.productName||'')?5:0);
+async function listUsb(){
+  if(!navigator.hid)return[];
+  try{const all=(await navigator.hid.getDevices()).slice().sort((a,b)=>hidScore(b)-hidScore(a));const k=all.filter(d=>hidScore(d)>0);return k.length?k:all;}catch(e){return[];}
+}
+function renderConn(){
+  const row=(key,ic,label,sub)=>`<div class="crow${csel===key?' on':''}" data-c="${esc(key)}"><span class="cic">${ic}</span><b>${esc(label)}</b><span class="mut">${esc(sub||'')}</span></div>`;
+  let h='<div class="chead">&#9662; Discovered Interfaces</div>';
+  h+=cdevs.length?cdevs.map((d,i)=>row('usb:'+i,'&#9096;',d.productName||'KNX USB interface','USB · VID '+(d.vendorId||0).toString(16)+' PID '+(d.productId||0).toString(16))).join(''):'<div class="mut cnone">No USB interface found yet. Press "Find USB interface…" and pick the Interra / KNX device in the list.</div>';
+  h+='<div class="chead">&#9662; Configured Interfaces</div>';
+  const g=getGws();h+=g.length?g.map(ip=>row('ws:'+ip,'&#8644;','ESP32 gateway',ip)+'').join(''):'<div class="mut cnone">None. Add an ESP32 gateway below if you use one.</div>';
+  $('#clist').innerHTML=h;$('#cok').disabled=!csel;
+}
+async function openConn(){
+  $('#cwarn').textContent=navigator.hid?'':'This browser cannot talk to USB devices. Use the BusSmith desktop app, or Chrome / Edge.';
+  cdevs=await listUsb();const g=getGws();csel=cdevs.length?'usb:0':(g[0]?'ws:'+g[0]:'');
+  renderConn();$('#cdlg').showModal();$('#cok').focus();
+}
+$('#clist').onclick=e=>{const r=e.target.closest('[data-c]');if(!r)return;csel=r.dataset.c;renderConn();};
+$('#clist').ondblclick=e=>{if(e.target.closest('[data-c]')&&csel)$('#cok').click();};
+$('#cfind').onclick=async()=>{
+  if(!navigator.hid)return;
+  try{const r=await navigator.hid.requestDevice({filters:[]});cdevs=await listUsb();if(r.length){const i=cdevs.findIndex(d=>d===r[0]);csel='usb:'+(i<0?0:i);}$('#cwarn').textContent=cdevs.length?'':'No KNX USB interface was selected.';renderConn();}
+  catch(e){$('#cwarn').textContent='Could not list USB devices: '+e.message;}
+};
+$('#cadd').onclick=()=>{const ip=$('#cip').value.trim();if(!ip)return;const g=getGws();if(!g.includes(ip)){g.push(ip);setGws(g);}csel='ws:'+ip;$('#cip').value='';renderConn();};
+$('#cdlg').onclose=()=>{if($('#cdlg').returnValue==='ok'&&csel)connectTo(csel,$('#cuse').checked);};
+async function connectTo(key,remember){
+  await disconnect();
+  if(remember)try{localStorage.setItem('nlk.conn',key);}catch(e){}
+  if(key.startsWith('usb:')){
+    const d=cdevs[+key.slice(4)]||(await listUsb())[0];
+    if(!d)return alert('The USB interface was not found.');
+    setG('connecting…');
+    try{await usbOpen(d);setG('USB: '+usb.name,'ok');$('#mconn').textContent='Disconnect';msg('Connected to '+usb.name);}
+    catch(e){usb=null;setG('USB error','err');alert('Could not open the USB interface: '+e.message+'\n\nClose ETS or any other program that is using the interface, then try again.');}
+  }else wsConnect(key.slice(3));
+}
+async function autoConn(){
+  const k=localStorage.getItem('nlk.conn');
+  if(k&&k.startsWith('usb:')&&(await listUsb()).length)connectTo('usb:0',false);
+}
+$('#mconn').onclick=()=>{if(isConnected()){disconnect();msg('Disconnected.');}else openConn();};
+
+function ensureDevice(a,l,d,name){
+  const T=P.topo;
+  let ar=T.areas.find(x=>x.num===a);if(!ar){ar={num:a,name:'Area '+a,desc:'',comments:[],lines:[]};T.areas.push(ar);T.areas.sort(byNum);}
+  let li=ar.lines.find(x=>x.num===l);if(!li){li={num:l,name:`Line ${a}.${l}`,desc:'',comments:[],devices:[]};ar.lines.push(li);ar.lines.sort(byNum);}
+  if(li.devices.some(x=>x.num===d))return false;
+  li.devices.push({num:d,name:name||`Device ${a}.${l}.${d}`,desc:'',comments:[],status:'Unknown',serial:'',dl:'',mfr:'',product:'',orderNo:'',params:[],objs:[]});li.devices.sort(byNum);return true;
+}
+function handleEvt(e){
+  switch(e.evt){
+  case 'progress':$('#sbmsg').textContent='Scanning '+e.addr+'…';break;
+  case 'found':{const [a,l,d]=e.addr.split('.').map(Number);scanCount++;if(ensureDevice(a,l,d))scanNew++;commit('Scan: found '+e.addr);renderAll();break;}
+  case 'scanDone':msg(`Scan finished: ${scanCount} device(s) answered, ${scanNew} new.`);opEnd(opScan,'done');break;
+  case 'scanStopped':msg(`Scan stopped: ${scanCount} device(s) answered so far, ${scanNew} new.`);opEnd(opScan,'stopped');break;
+  case 'pa':if(!paFound.includes(e.addr))paFound.push(e.addr);break;
+  case 'paWritten':setTimeout(()=>sendCmd('readpa'),500);break;
+  case 'paDone':
+    if(pendingVerify){
+      const want=pendingVerify;pendingVerify=null;
+      if(paFound.includes(want)){
+        const [a,l,d]=want.split('.').map(Number);
+        if(!devByAddr.has(want)){ensureDevice(a,l,d,'Device '+want);commit('Program address '+want);renderAll();}
+        msg(`Done: the device now answers as ${want}.`);opEnd(opPa,'done');
+      }else{msg(`The device did not confirm ${want}. Check that its programming LED was on, then try again.`);opEnd(opPa,'failed');}
+    }else{msg(paFound.length?'Devices in programming mode: '+paFound.join(', '):'No device answered. Press the programming button on a device (LED on) and try again.');opEnd(opPa,'done');}
+    break;
+  }
+}
+
+/* ================= bus monitor ================= */
+const MAXLOG=5000;let log=[],paused=false,mfilterVal='';
+function bytesOf(t){return (t.data.match(/../g)||[]).map(h=>parseInt(h,16));}
+function enrich(t){
+  const g=t.group?gaByStr.get(t.dst):null;
+  t.name=g?g.name:'';t.type=g&&g.dpt?(DPT_NAME[g.dpt]||g.dpt):'';
+  t.value=t.apci==='read'?'':decodeVal(g&&g.dpt,bytesOf(t));
+  return t;
+}
+const devName=a=>{const v=devByAddr.get(a);return v?v.name:'';};
+function rowHTML(t){
+  const unknown=t.group&&!t.name&&t.dst!=='0/0/0',sn=devName(t.src);
+  return `<tr class="${t.dir}"><td>${t.time}</td><td>${t.dir}</td><td>${esc(t.src)}${sn?' · '+esc(sn):''}</td><td>${esc(t.dst)}</td><td>${esc(t.name)}</td><td>${esc(t.type)}</td><td>${esc(t.value)}${t.apci!=='write'?' <i>('+esc(t.apci)+')</i>':''}</td><td>${esc(t.data)}</td><td>${unknown?`<button class="btn" data-add="${esc(t.dst)}" title="Add to project">+</button>`:''}</td></tr>`;
+}
+const matches=(t,f)=>(!f||(t.src+' '+devName(t.src)+' '+t.dst+' '+t.name+' '+t.value+' '+t.data+' '+t.apci).toLowerCase().includes(f));
+const inMon=()=>sel&&sel.k==='dtool'&&(sel.o.id==='gm'||sel.o.id==='bm')&&$('#log');
+const wantRow=t=>sel&&sel.o.id==='bm'?true:t.group;
+function renderLog(){
+  const el=$('#log');if(!el||!sel||sel.k!=='dtool')return;
+  log.forEach(enrich);
+  const f=mfilterVal.trim().toLowerCase();
+  el.innerHTML=log.filter(t=>wantRow(t)&&matches(t,f)).slice(-1000).map(rowHTML).join('');
+  $('#mcount').textContent=`${log.length} telegrams`;
+  const w=$('#logwrap');w.scrollTop=w.scrollHeight;
+}
+function pushTelegram(t){
+  const d=new Date();t.time=d.toLocaleTimeString([],{hour12:false})+'.'+String(d.getMilliseconds()).padStart(3,'0');
+  if(!gaByStr)index();
+  enrich(t);log.push(t);if(log.length>MAXLOG)log.shift();
+  if(t.group&&(t.apci==='write'||t.apci==='response')){
+    live[t.dst]={value:t.value||('raw '+t.data),time:t.time};
+    const lv=$('#livev');if(lv&&sel&&sel.k==='ga'&&gaMap.get(sel.o)===t.dst)lv.innerHTML=esc(live[t.dst].value)+' <span class="mut">at '+t.time+'</span>';
+  }
+  if(paused||!inMon())return;
+  const f=mfilterVal.trim().toLowerCase();
+  if(wantRow(t)&&matches(t,f)){
+    const w=$('#logwrap'),atEnd=w.scrollTop+w.clientHeight>=w.scrollHeight-40;
+    $('#log').insertAdjacentHTML('beforeend',rowHTML(t));
+    while($('#log').rows.length>1000)$('#log').deleteRow(0);
+    if(atEnd)w.scrollTop=w.scrollHeight;
+  }
+  $('#mcount').textContent=`${log.length} telegrams`;
+}
+function addUnknownGA(dst){
+  if(!guard())return;
+  const [a,m,s]=dst.split('/').map(Number);
+  formDlg('Add group address '+dst,[{id:'n',label:'Name',req:1}]).then(r=>{
+    if(!r)return;
+    let main=P.mains.find(x=>x.num===a);if(!main){main={num:a,name:'Main '+a,desc:'',pass:'No',comments:[],mids:[]};P.mains.push(main);P.mains.sort(byNum);}
+    let mid=main.mids.find(x=>x.num===m);if(!mid){mid={num:m,name:'Middle '+m,desc:'',pass:'No',comments:[],gas:[]};main.mids.push(mid);main.mids.sort(byNum);}
+    if(!mid.gas.some(g=>g.num===s)){mid.gas.push({num:s,name:r.n.trim(),desc:'',dpt:'',comments:[]});mid.gas.sort(byNum);}
+    commit('Add group address from bus');renderAll();
+  });
+}
+
+/* ================= start ================= */
+function startApp(){
+  try{startApp2();}catch(err){showErr(err.message);}
+}
+function startApp2(){
+  loadFavs();
+  $('#gwip').value=localStorage.getItem('nlk.gwip')||'';setTimeout(()=>{try{autoConn();}catch(e){}},500);
+  P=fix(JSON.parse(localStorage.getItem(PKEY)||'null'));
+  if(!P.creBy)P.creBy=ME.id;
+  hist=[{s:JSON.stringify(P),label:'Initial state',time:now(),by:''}];hi=0;
+  tabs=[{id:uid(),panel:'ga',sel:null,devtab:'obj'}];ti=0;nav=[];ni=-1;
+  Object.values(S).forEach(o=>opened.add(o));
+  index();
+  setPanel('ga');
+  msg('Logged in as '+ME.name);
+}
+(function init(){
+  const sid=sessionStorage.getItem('nlk.session');
+  const u=sid&&getUsers().find(x=>x.id===sid);
+  if(u)enter(u);else showLogin();
+})();
+</script>
+</body>
+</html>

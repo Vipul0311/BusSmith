@@ -1,0 +1,10 @@
+# Never commit proprietary / private files
+*.knxproj
+*.etsapp
+*.knxprod
+*.pdf
+*.zip
+node_modules/
+dist/
+build/
+.DS_Store
